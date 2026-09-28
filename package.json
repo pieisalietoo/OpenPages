@@ -1,0 +1,19 @@
+{
+  "name": "openpages-monorepo",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.5.1",
+  "scripts": {
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "typecheck": "pnpm -r --filter @openpages/vue --filter @openpages/demo typecheck",
+    "test": "pnpm --filter @openpages/vue test",
+    "build": "pnpm --filter @openpages/vue build",
+    "demo": "pnpm --filter @openpages/demo dev"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.2.4",
+    "typescript": "^5.9.2"
+  }
+}
+

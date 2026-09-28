@@ -1,0 +1,659 @@
+@import "tailwindcss";
+
+:root {
+  --op-accent: #1a5f4a;
+  --op-selection: #2563eb;
+  --op-page-bg: #f7f4ef;
+  --op-guide: #94a3b8;
+}
+
+.op-renderer {
+  display: flex;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.op-page {
+  position: relative;
+  background: var(--op-page-bg);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 12%);
+  overflow: hidden;
+}
+
+.op-margin-guide {
+  position: absolute;
+  border: 1px dashed color-mix(in srgb, var(--op-guide) 70%, transparent);
+  pointer-events: none;
+}
+
+.op-guide {
+  position: absolute;
+  pointer-events: none;
+  background: var(--op-guide);
+}
+
+.op-guide[data-orientation="vertical"] {
+  top: 0;
+  bottom: 0;
+  width: 1px;
+}
+
+.op-guide[data-orientation="horizontal"] {
+  left: 0;
+  right: 0;
+  height: 1px;
+}
+
+.op-section {
+  position: absolute;
+  box-sizing: border-box;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.op-section.is-hovered {
+  outline: 1px solid color-mix(in srgb, var(--op-selection) 55%, transparent);
+}
+
+.op-section.is-selected {
+  outline: 2px solid var(--op-selection);
+}
+
+.op-section.is-hidden {
+  opacity: 0.45;
+  outline: 1px dashed color-mix(in srgb, var(--op-selection) 55%, #888);
+  outline-offset: 1px;
+}
+
+.op-page.op-exporting .op-section.is-hidden {
+  display: none;
+}
+
+.op-page.op-exporting .op-margin-guide,
+.op-page.op-exporting .op-guide,
+.op-page.op-exporting .op-snap-guide,
+.op-page.op-exporting .op-resize-handle,
+.op-page.op-exporting .op-text-chrome,
+.op-page.op-exporting .op-selection-chrome {
+  display: none !important;
+}
+
+.op-page.op-exporting .op-section.is-selected,
+.op-page.op-exporting .op-section.is-hovered {
+  outline: none !important;
+}
+
+.op-page.op-exporting .op-section--runaround {
+  background: transparent !important;
+  border: none !important;
+}
+
+.op-section-text {
+  margin: 0;
+  font-size: inherit;
+  font-family: inherit;
+  font-weight: inherit;
+  line-height: 1.4;
+  color: inherit;
+  white-space: pre-wrap;
+}
+
+.op-section-lines {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.op-section-lines.is-editing {
+  z-index: 1;
+}
+
+.op-line {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+  white-space: pre;
+  color: inherit;
+  text-decoration: inherit;
+}
+
+.op-line[data-op-marker] {
+  /* Keep markers inside the section (overflow:hidden on .op-section-lines). */
+  padding-left: 1.35em;
+  overflow: hidden;
+}
+
+/* Visual-only list prefix — not in textContent / model plain offsets. */
+.op-line[data-op-marker]::before {
+  content: attr(data-op-marker);
+  position: absolute;
+  left: 0;
+  width: 1.25em;
+  margin-right: 0;
+  white-space: pre;
+  box-sizing: border-box;
+}
+
+.op-text-caret {
+  position: absolute;
+  width: 1px;
+  background: currentColor;
+  pointer-events: none;
+  z-index: 3;
+  animation: op-caret-blink 1s step-end infinite;
+}
+
+.op-text-sel {
+  position: absolute;
+  background: color-mix(in srgb, var(--op-selection) 35%, transparent);
+  pointer-events: none;
+  z-index: 2;
+}
+
+@keyframes op-caret-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.op-section-headline {
+  margin: 0;
+  font-size: inherit;
+  font-family: inherit;
+  font-weight: inherit;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: inherit;
+}
+
+.op-section-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.op-section-panel {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  background: #fff;
+}
+
+.op-section-panel[data-border-style="ink"],
+.op-section[data-border-style="ink"] .op-section-panel {
+  border: 3px solid #111;
+}
+
+.op-section-panel[data-border-style="double"],
+.op-section[data-border-style="double"] .op-section-panel {
+  border: 4px double #111;
+}
+
+.op-section-panel[data-border-style="rounded"],
+.op-section[data-border-style="rounded"] .op-section-panel {
+  border: 2px solid #111;
+  border-radius: 12px;
+}
+
+.op-section--runaround {
+  background: #f4f4f4;
+  border: 2px dashed color-mix(in srgb, var(--op-selection) 70%, #666);
+}
+
+.op-section-runaround {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.op-resize-handle {
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  border: 1px solid var(--op-selection);
+  background: #fff;
+  cursor: nwse-resize;
+}
+
+.op-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+}
+
+.op-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  align-items: center;
+  box-sizing: border-box;
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--op-guide) 55%, transparent);
+  background: color-mix(in srgb, #fff 82%, var(--op-page-bg));
+}
+
+/* Document toolbar (and its popovers) must stack above floating section/edit chrome. */
+.op-toolbar[data-op-toolbar="document"] {
+  position: relative;
+  z-index: 60;
+}
+
+.op-toolbar-spacer {
+  display: inline-block;
+  box-sizing: border-box;
+  width: 0;
+  height: 1.75rem;
+  border: 1px solid transparent;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+  flex: 0 0 auto;
+}
+
+.op-toolbar-sep {
+  align-self: stretch;
+  width: 1px;
+  margin: 0.2rem 0.35rem;
+  background: color-mix(in srgb, var(--op-guide) 70%, transparent);
+  flex: 0 0 auto;
+}
+
+.op-toolbar[data-op-toolbar="selection"] {
+  background: color-mix(in srgb, #fff 70%, #e8eef8);
+}
+
+.op-tool-wrap {
+  position: relative;
+}
+
+.op-tool-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #1f2d26;
+  cursor: pointer;
+}
+
+.op-tool-btn:hover,
+.op-tool-btn[aria-expanded="true"],
+.op-tool-btn.is-active,
+.op-tool-btn[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--op-accent) 45%, transparent);
+  color: var(--op-accent);
+  background: #fff;
+}
+
+.op-tool-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.op-tool-popover {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  z-index: 70;
+  min-width: 12rem;
+  padding: 0.6rem;
+  border: 1px solid #b7c4bc;
+  background: #fff;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 12%);
+}
+
+.op-popover-title {
+  margin: 0 0 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.op-layout-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.op-layout-item {
+  display: block;
+  width: 100%;
+  padding: 0.35rem 0.4rem;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.op-layout-item:hover {
+  background: #eef4f0;
+}
+
+.op-save-form {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.op-save-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.3rem 0.4rem;
+  border: 1px solid #9aafa3;
+  font: inherit;
+}
+
+.op-save-btn {
+  padding: 0.3rem 0.55rem;
+  border: 1px solid var(--op-accent);
+  background: var(--op-accent);
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+.op-export-json-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+@media print {
+  .op-toolbar {
+    display: none;
+  }
+
+  .op-editor-canvas {
+    background: transparent;
+    overflow: visible;
+  }
+
+  .op-margin-guide,
+  .op-guide,
+  .op-snap-guide,
+  .op-resize-handle,
+  .op-text-chrome,
+  .op-selection-chrome {
+    display: none !important;
+  }
+
+  .op-section.is-selected,
+  .op-section.is-hovered {
+    outline: none !important;
+  }
+
+  .op-section--runaround {
+    background: transparent !important;
+    border: none !important;
+  }
+}
+
+.op-snap-guide {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 40;
+}
+
+.op-snap-align {
+  position: absolute;
+  background: transparent;
+}
+
+.op-snap-align[data-orientation="vertical"] {
+  top: 0;
+  bottom: 0;
+  width: 0;
+  border-left: 1px dashed #e11d48;
+}
+
+.op-snap-align[data-orientation="horizontal"] {
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 1px dashed #e11d48;
+}
+
+.op-snap-gap {
+  position: absolute;
+  background: transparent;
+}
+
+.op-snap-gap[data-orientation="horizontal"] {
+  height: 0;
+  margin-top: 0;
+  border-top: 2px dashed #e11d48;
+}
+
+.op-snap-gap[data-orientation="horizontal"]::before,
+.op-snap-gap[data-orientation="horizontal"]::after {
+  content: "";
+  position: absolute;
+  top: -4px;
+  width: 2px;
+  height: 8px;
+  background: #e11d48;
+}
+
+.op-snap-gap[data-orientation="horizontal"]::before {
+  left: 0;
+}
+
+.op-snap-gap[data-orientation="horizontal"]::after {
+  right: 0;
+}
+
+.op-snap-gap[data-orientation="vertical"] {
+  width: 0;
+  margin-left: 0;
+  border-left: 2px dashed #e11d48;
+}
+
+.op-snap-gap[data-orientation="vertical"]::before,
+.op-snap-gap[data-orientation="vertical"]::after {
+  content: "";
+  position: absolute;
+  left: -4px;
+  height: 2px;
+  width: 8px;
+  background: #e11d48;
+}
+
+.op-snap-gap[data-orientation="vertical"]::before {
+  top: 0;
+}
+
+.op-snap-gap[data-orientation="vertical"]::after {
+  bottom: 0;
+}
+
+.op-section.is-snap-target {
+  outline: 2px dashed #e11d48;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px color-mix(in srgb, #e11d48 22%, transparent);
+}
+
+.op-page-setup,
+.op-add-types,
+.op-style-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  min-width: 11rem;
+}
+
+.op-page-presets,
+.op-add-types {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.op-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.75rem;
+  color: #3d5248;
+}
+
+.op-field input,
+.op-field select {
+  font: inherit;
+  padding: 0.25rem 0.35rem;
+  border: 1px solid #9aafa3;
+  background: #fff;
+}
+
+.op-field--check {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.op-text-chrome {
+  position: absolute;
+  z-index: 50;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.35rem;
+  padding: 0.3rem 0.4rem;
+  border: 1px solid #9aafa3;
+  background: color-mix(in srgb, #fff 92%, #e8f0ec);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 12%);
+  pointer-events: auto;
+}
+
+.op-selection-chrome {
+  position: absolute;
+  z-index: 45;
+  box-sizing: border-box;
+  min-width: 260px;
+  padding: 0.3rem 0.4rem;
+  border: 1px solid #9aafa3;
+  background: color-mix(in srgb, #fff 92%, #e8eef8);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 12%);
+  pointer-events: auto;
+}
+
+.op-selection-chrome .op-toolbar {
+  border: none;
+  background: transparent;
+  padding: 0;
+  gap: 0.25rem;
+}
+
+.op-selection-chrome .op-toolbar[data-op-toolbar="selection"] {
+  background: transparent;
+}
+
+.op-chrome-grow {
+  flex: 1 1 0.5rem;
+  min-width: 0.5rem;
+}
+
+.op-chrome-delete {
+  margin-left: 0;
+  color: #8a3030;
+  border-color: #c49a9a;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.op-chrome-icon {
+  display: block;
+}
+
+.op-section-text-edit [data-op-chrome-sel] {
+  background: color-mix(in srgb, #4c8bf5 35%, transparent);
+}
+
+.op-text-chrome input[type="number"] {
+  width: 3.5rem;
+}
+
+.op-field-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.op-section-text-edit {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  resize: none;
+  background: transparent;
+  color: transparent;
+  caret-color: transparent;
+  font: inherit;
+  line-height: inherit;
+  outline: none;
+  overflow: hidden;
+  white-space: pre-wrap;
+}
+
+/* Inline color/weight in the flat CE must not paint over line boxes. */
+.op-section-text-edit * {
+  color: transparent !important;
+  -webkit-text-fill-color: transparent;
+  caret-color: transparent;
+}
+
+.op-section-text-edit::selection,
+.op-section-text-edit *::selection {
+  background: transparent;
+  color: transparent;
+}
+
+.op-section-text-source {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0.25rem;
+  border: none;
+  resize: none;
+  background: color-mix(in srgb, #1a1a1a 4%, transparent);
+  color: inherit;
+  font-family: "Courier New", monospace;
+  font-size: 0.85em;
+  line-height: 1.35;
+  outline: none;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+.op-chrome-btn {
+  min-width: 1.6rem;
+  padding: 0.15rem 0.35rem;
+  border: 1px solid #9aafa3;
+  background: #fff;
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.op-text-chrome input[type="number"] {
+  width: 3.2rem;
+}

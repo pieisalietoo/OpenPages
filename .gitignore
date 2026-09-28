@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+.venv/
+venv/
+__pycache__/
+
+# Build & coverage
+dist/
+build/
+out/
+coverage/
+.coverage
+htmlcov/
+*.tsbuildinfo
+.next/
+.nuxt/
+.turbo/
+
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+
+# Tool / agent artifacts
+artifacts/
+repomap/
+.repomix/
+repomix-output.*
+
+# Logs & OS
+*.log
+.DS_Store
+Thumbs.db
+.idea/
+
+# tdd-evidence/ is tracked (red.txt / green.txt). Do not ignore that folder.

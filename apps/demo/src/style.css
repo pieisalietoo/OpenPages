@@ -1,0 +1,236 @@
+@import "tailwindcss";
+@import "@openpages/vue/style.css";
+
+html,
+body,
+#app {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  background:
+    radial-gradient(ellipse at top, #e8f0ec 0%, transparent 55%),
+    linear-gradient(180deg, #f4f7f5 0%, #e6ebe8 100%);
+  color: #14231c;
+}
+
+.demo-shell {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 3rem;
+}
+
+.demo-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.demo-header h1 {
+  margin: 0;
+  font-size: 1.85rem;
+  letter-spacing: -0.02em;
+}
+
+.demo-icon {
+  width: 2rem;
+  height: 2rem;
+  margin-top: 0.2rem;
+  color: var(--op-accent);
+  flex-shrink: 0;
+}
+
+.demo-lede {
+  margin: 0.35rem 0 0;
+  color: #3d5248;
+  max-width: 42rem;
+}
+
+.demo-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0 0 1rem;
+  padding: 0.25rem;
+  border: 1px solid #c5d2cb;
+  background: color-mix(in srgb, #fff 80%, #e8f0ec);
+}
+
+.demo-tab {
+  padding: 0.45rem 0.85rem;
+  border: 1px solid transparent;
+  background: transparent;
+  font: inherit;
+  font-size: 0.9rem;
+  color: #3d5248;
+  cursor: pointer;
+}
+
+.demo-tab.is-active,
+.demo-tab[aria-selected="true"] {
+  border-color: #9aafa3;
+  background: #fff;
+  color: #14231c;
+  font-weight: 600;
+}
+
+.demo-tab-panel {
+  margin-bottom: 1.5rem;
+}
+
+.demo-panel-lede {
+  margin: 0 0 0.75rem;
+  color: #3d5248;
+  max-width: 42rem;
+}
+
+.demo-instructions {
+  margin-bottom: 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid #c5d2cb;
+  background: color-mix(in srgb, #fff 90%, #e8f0ec);
+}
+
+.demo-instructions h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+}
+
+.demo-instructions ol {
+  margin: 0 0 0.75rem;
+  padding-left: 1.25rem;
+  color: #3d5248;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.demo-instructions li + li {
+  margin-top: 0.35rem;
+}
+
+.demo-code {
+  margin: 0;
+  padding: 0.75rem;
+  overflow: auto;
+  border: 1px solid #9aafa3;
+  background: #f7faf8;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+.demo-data-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0.65rem;
+  margin-bottom: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid #c5d2cb;
+  background: color-mix(in srgb, #fff 88%, #e8f0ec);
+}
+
+.demo-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  color: #3d5248;
+}
+
+.demo-field input {
+  padding: 0.4rem 0.5rem;
+  border: 1px solid #9aafa3;
+  background: #fff;
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+.demo-host-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.demo-btn {
+  padding: 0.4rem 0.7rem;
+  border: 1px solid #9aafa3;
+  background: #fff;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.demo-btn.is-active {
+  border-color: #3d5248;
+  background: color-mix(in srgb, #e8f0ec 70%, #fff);
+  font-weight: 600;
+}
+
+.demo-event {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #3d5248;
+  font-family: ui-monospace, Consolas, monospace;
+}
+
+.demo-json-panel {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  border: 1px solid #c5d2cb;
+  background: color-mix(in srgb, #fff 88%, #e8f0ec);
+}
+
+.demo-json-panel h2 {
+  margin: 0 0 0.35rem;
+  font-size: 1.1rem;
+}
+
+.demo-json-hint {
+  margin: 0 0 0.75rem;
+  color: #3d5248;
+  font-size: 0.9rem;
+}
+
+.demo-json-pretty {
+  margin: 0 0 0.75rem;
+  max-height: 16rem;
+  overflow: auto;
+  padding: 0.75rem;
+  border: 1px solid #9aafa3;
+  background: #f7faf8;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+.demo-json-label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.85rem;
+  color: #3d5248;
+}
+
+.demo-json-raw {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.5rem;
+  border: 1px solid #9aafa3;
+  background: #fff;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  resize: vertical;
+}
+
+.demo-json-error {
+  margin: 0.35rem 0 0;
+  color: #b42318;
+  font-size: 0.85rem;
+}

@@ -1,0 +1,75 @@
+{
+  "name": "@openpages/vue",
+  "version": "0.1.0",
+  "description": "Vue 3 layout engine for comics and newspaper-style pages",
+  "type": "module",
+  "license": "MIT",
+  "author": "pieisalietoo",
+  "keywords": [
+    "vue",
+    "layout",
+    "comics",
+    "newspaper",
+    "wysiwyg",
+    "editor"
+  ],
+  "homepage": "https://github.com/pieisalietoo/OpenPages#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pieisalietoo/OpenPages.git",
+    "directory": "packages/open-pages"
+  },
+  "bugs": {
+    "url": "https://github.com/pieisalietoo/OpenPages/issues"
+  },
+  "main": "./dist/open-pages.js",
+  "module": "./dist/open-pages.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/open-pages.js"
+    },
+    "./style.css": "./dist/open-pages.css"
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": [
+    "**/*.css",
+    "./dist/style.js"
+  ],
+  "scripts": {
+    "dev": "vite build --watch",
+    "build": "vite build",
+    "prepublishOnly": "pnpm build",
+    "typecheck": "vue-tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "peerDependencies": {
+    "vue": "^3.5.0"
+  },
+  "dependencies": {
+    "html-to-image": "^1.11.13",
+    "lucide-vue-next": "^0.544.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.13",
+    "@vitejs/plugin-vue": "^6.0.1",
+    "@vue/test-utils": "^2.4.6",
+    "happy-dom": "^18.0.1",
+    "tailwindcss": "^4.1.13",
+    "vite": "^7.1.5",
+    "vite-plugin-dts": "^4.5.4",
+    "vitest": "^3.2.4",
+    "vue": "^3.5.21",
+    "vue-tsc": "^3.0.7"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
