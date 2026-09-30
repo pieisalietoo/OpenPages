@@ -7,9 +7,10 @@ import {
   createFontCatalog,
   faceNameForFont,
   loadOpenPagesFonts,
+  missingFontFamilies,
   type OpenPagesFont,
 } from '../src/model/fonts'
-import { addTextSection } from '../src/model/section'
+import { addHeadlineSection, addTextSection } from '../src/model/section'
 
 describe('font catalog', () => {
   it('exposes an expanded builtin list beyond the original four families', () => {
@@ -35,11 +36,11 @@ describe('font catalog', () => {
         source: 'https://example.com/literata.woff2',
       },
     ]
-    const merged = createFontCatalog({ fonts: custom })
+    const merged = createFontCatalog({ fonts: custom }).list()
     expect(merged.some((f) => f.id === 'georgia')).toBe(true)
     expect(merged.at(-1)?.id).toBe('literata')
 
-    const onlyCustom = createFontCatalog({ fonts: custom, includeBuiltins: false })
+    const onlyCustom = createFontCatalog({ fonts: custom, includeBuiltins: false }).list()
     expect(onlyCustom).toHaveLength(1)
     const literata = custom[0]
     expect(literata).toBeTruthy()
@@ -96,7 +97,7 @@ describe('renderer font options', () => {
     })
     const fonts = createFontCatalog({
       fonts: [{ id: 'demo', label: 'Demo Face', family: "'Demo Face', serif" }],
-    })
+    }).list()
     const wrapper = mount(OpenPagesRenderer, {
       props: {
         document: doc,
@@ -114,5 +115,81 @@ describe('renderer font options', () => {
     expect(options.length).toBeGreaterThanOrEqual(11)
     expect(options).toContain('Demo Face')
     wrapper.unmount()
+  })
+})
+
+describe('mutable font catalog', () => {
+  it('treats missing locked as unlocked; respects locked:true including builtins', () => {
+    const catalog = createFontCatalog({
+      fonts: [
+        { id: 'custom', label: 'Custom', family: "'Custom', serif" },
+        { id: 'georgia', label: 'Georgia Locked', family: 'Georgia, serif', locked: true },
+      ],
+    })
+    expect(catalog.list().find((f) => f.id === 'arial')?.locked).toBe(false)
+    expect(catalog.list().find((f) => f.id === 'custom')?.locked).toBe(false)
+    expect(catalog.list().find((f) => f.id === 'georgia')?.locked).toBe(true)
+    expect(catalog.remove('arial')).toBe(true)
+    expect(catalog.remove('georgia')).toBe(false)
+    expect(catalog.remove('custom')).toBe(true)
+    expect(catalog.list().some((f) => f.id === 'custom')).toBe(false)
+  })
+
+  it('add inserts a font, emits fontsChange, and skips overwrite of locked ids', () => {
+    const catalog = createFontCatalog({ includeBuiltins: false, fonts: [] })
+    const onChange = vi.fn()
+    catalog.on('fontsChange', onChange)
+
+    const added = catalog.add({
+      id: 'literata',
+      label: 'Literata',
+      family: "'Literata', serif",
+      source: 'https://example.com/l.woff2',
+    })
+    expect(added).not.toBeNull()
+    expect(added?.id).toBe('literata')
+    expect(catalog.list()).toHaveLength(1)
+    expect(onChange).toHaveBeenCalled()
+
+    catalog.add({
+      id: 'literata',
+      label: 'Literata',
+      family: "'Literata', serif",
+      locked: true,
+    })
+    expect(catalog.remove('literata')).toBe(false)
+    expect(
+      catalog.add({
+        id: 'literata',
+        label: 'Other',
+        family: 'Other, serif',
+      }),
+    ).toBeNull()
+    expect(catalog.list()[0]?.label).toBe('Literata')
+  })
+
+  it('missingFontFamilies reports families used in the document but absent from catalog', () => {
+    const doc = createDocument({ title: 'Fonts' })
+    const page = doc.pages[0]
+    if (!page) throw new Error('page')
+    const text = addTextSection(page, {
+      x: 0,
+      y: 0,
+      width: 40,
+      height: 20,
+      content: 'a',
+    })
+    text.fontFamily = "'Missing Face', serif"
+    const head = addHeadlineSection(page, {
+      x: 0,
+      y: 30,
+      width: 40,
+      height: 20,
+      content: 'h',
+    })
+    head.fontFamily = 'Georgia, serif'
+
+    const catalog = createFontCatalog()
+    expect(missingFontFamilies(doc, catalog.list())).toEqual(["'Missing Face', serif"])
   })
 })

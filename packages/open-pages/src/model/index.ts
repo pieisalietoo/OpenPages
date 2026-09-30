@@ -17,7 +17,12 @@ export {
   serializeDocument,
 } from './document'
 export { createFeatureDemoDocument } from './feature-demo'
-export type { CreateFontCatalogOptions, OpenPagesFont } from './fonts'
+export type {
+  CreateFontCatalogOptions,
+  FontCatalog,
+  FontsChangeEvent,
+  OpenPagesFont,
+} from './fonts'
 export {
   applyCatalogFontSelection,
   BUILTIN_FONTS,
@@ -26,6 +31,8 @@ export {
   fontWeightIsBold,
   loadOpenPagesFonts,
   matchCatalogFont,
+  missingFontFamilies,
+  slugFontId,
 } from './fonts'
 export { createFontsDemoDocument } from './fonts-demo'
 export type { HistoryController } from './history'

@@ -369,10 +369,10 @@ function setDemoLocale(locale: 'en' | 'it') {
 
 const fonts = createFontCatalog()
 
-&lt;OpenPagesEditor v-model="doc" :fonts="fonts" /&gt;</pre>
+&lt;OpenPagesEditor v-model="doc" :font-catalog="fonts" /&gt;</pre>
       </aside>
 
-      <OpenPagesEditor v-model="fontsDoc" v-model:json="fontsJson" :fonts="fontsCatalog" />
+      <OpenPagesEditor v-model="fontsDoc" v-model:json="fontsJson" :font-catalog="fontsCatalog" />
     </section>
 
     <!-- Custom fonts -->
@@ -422,7 +422,7 @@ const custom = [{
 await loadOpenPagesFonts(custom)
 const fonts = createFontCatalog({ fonts: custom })
 
-&lt;OpenPagesEditor v-model="doc" :fonts="fonts" /&gt;</pre>
+&lt;OpenPagesEditor v-model="doc" :font-catalog="fonts" /&gt;</pre>
         <p v-if="customFontsError" class="demo-json-error">
           Font load failed: {{ customFontsError }}
         </p>
@@ -434,7 +434,7 @@ const fonts = createFontCatalog({ fonts: custom })
         v-if="customFontsReady"
         v-model="customDoc"
         v-model:json="customJson"
-        :fonts="customCatalog"
+        :font-catalog="customCatalog"
       />
     </section>
 

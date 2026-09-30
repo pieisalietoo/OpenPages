@@ -29,6 +29,8 @@ export type {
   DataBoundDefaults,
   DocumentData,
   DocumentMeta,
+  FontCatalog,
+  FontsChangeEvent,
   Guide,
   HeadlineSection,
   HistoryController,
@@ -110,6 +112,7 @@ export {
   loadOpenPagesFonts,
   matchCatalogFont,
   migrateDocument,
+  missingFontFamilies,
   moveSection,
   nudgeSection,
   PAGE_PRESETS,
@@ -127,6 +130,7 @@ export {
   setPageMargins,
   setSectionHidden,
   setSectionLocked,
+  slugFontId,
   snapSectionPosition,
   toggleSectionSelection,
   ungroupSections,
@@ -137,6 +141,9 @@ export type {
   BuiltinToolId,
   CreateToolControllerOptions,
   ToolActivateEvent,
+  ToolbarChromeId,
+  ToolbarEntry,
+  ToolbarItemId,
   ToolChangeEvent,
   ToolController,
   ToolDefinition,
@@ -144,4 +151,12 @@ export type {
   ToolId,
   ToolScope,
 } from './tooling'
-export { BUILTIN_TOOLS, createToolController, visibleSelectionTools } from './tooling'
+export {
+  BUILTIN_TOOLS,
+  createToolController,
+  DEFAULT_DOCUMENT_TOOLBAR,
+  DEFAULT_SELECTION_TOOLBAR,
+  isToolbarChromeId,
+  resolveToolbarEntries,
+  visibleSelectionTools,
+} from './tooling'

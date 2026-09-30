@@ -21,18 +21,14 @@ describe('magnet tool + snap guides in UI', () => {
     expect(wrapper.find('[data-op-tool="view.magnet"]').exists()).toBe(true)
   })
 
-  it('places magnet last in the document toolbar after page setup and add', () => {
+  it('places page.setup last in the document toolbar after add and magnet', () => {
     const wrapper = mount(OpenPagesEditor, {
       props: { modelValue: createDocument({ title: 'M' }) },
     })
     const bar = wrapper.get('[data-op-toolbar="document"]')
     const toolIds = bar.findAll('[data-op-tool]').map((el) => el.attributes('data-op-tool'))
-    expect(toolIds.at(-1)).toBe('view.magnet')
-    expect(toolIds.slice(-3)).toEqual(['page.setup', 'section.add', 'view.magnet'])
-    const sep = bar.get('[data-op-toolbar-sep]')
-    expect(
-      sep.element.nextElementSibling?.querySelector('[data-op-tool="page.setup"]'),
-    ).toBeTruthy()
+    expect(toolIds.at(-1)).toBe('page.setup')
+    expect(toolIds.slice(-3)).toEqual(['section.add', 'view.magnet', 'page.setup'])
   })
 
   it('toggles magnet active state on the toolbar button', async () => {

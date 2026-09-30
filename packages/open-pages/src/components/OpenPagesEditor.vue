@@ -1,4 +1,5 @@
 ﻿<script setup lang="ts">
+import { Trash2 } from 'lucide-vue-next'
 import { computed, onBeforeUnmount, onMounted, provide, reactive, ref, watch } from 'vue'
 import {
   createBrowserExportAdapters,
@@ -12,8 +13,13 @@ import { type OpenPagesDocument, parseDocument, serializeDocument } from '../mod
 import {
   applyCatalogFontSelection,
   BUILTIN_FONTS,
+  createFontCatalog,
+  type FontCatalog,
+  loadOpenPagesFonts,
   matchCatalogFont,
+  missingFontFamilies,
   type OpenPagesFont,
+  slugFontId,
 } from '../model/fonts'
 import { createHistory } from '../model/history'
 import { createLayoutLibrary, type LayoutLibrary, type NamedLayout } from '../model/layouts'
@@ -46,6 +52,12 @@ import {
   toggleSectionSelection,
 } from '../model/selection'
 import { visibleSelectionTools } from '../tooling/selection-tools'
+import {
+  DEFAULT_DOCUMENT_TOOLBAR,
+  DEFAULT_SELECTION_TOOLBAR,
+  resolveToolbarEntries,
+  type ToolbarItemId,
+} from '../tooling/toolbar-order'
 import { createToolController, type ToolActivateEvent, type ToolId } from '../tooling/tools'
 import OpenPagesRenderer from './OpenPagesRenderer.vue'
 import OpenPagesToolbar from './OpenPagesToolbar.vue'
@@ -59,10 +71,28 @@ const props = withDefaults(
     layouts?: NamedLayout[]
     exportAdapters?: ExportAdapters
     fonts?: OpenPagesFont[]
+    fontCatalog?: FontCatalog
     /** Shared i18n controller (optional). */
     i18n?: OpenPagesI18n
     /** Initial locale when `i18n` is not passed (default `en`). */
     locale?: LocaleCode
+    /** Host veto before persisting a named layout; return false to abort. */
+    beforeLayoutSave?: (payload: {
+      name: string
+      document: OpenPagesDocument
+      /** true when saving over an existing named layout. */
+      exists: boolean
+    }) => boolean | Promise<boolean>
+    /** Host veto before adding/replacing a catalog font; return false to abort. */
+    beforeFontAdd?: (payload: {
+      font: OpenPagesFont
+      /** true when adding over an existing unlocked font id. */
+      exists: boolean
+    }) => boolean | Promise<boolean>
+    /** Ordered document toolbar ids (`sep` / `grow` allowed). Omitted ids stay hidden. */
+    documentToolbar?: ToolbarItemId[]
+    /** Ordered selection toolbar ids (`sep` / `grow` allowed). Omitted ids stay hidden. */
+    selectionToolbar?: ToolbarItemId[]
   }>(),
   {
     toolEnabled: () => ({}),
@@ -78,6 +108,8 @@ const emit = defineEmits<{
   toolActivate: [ToolActivateEvent]
   toolChange: [{ id: ToolId; enabled: boolean }]
   layoutChange: [{ name: string | null }]
+  fontsChange: [{ fonts: OpenPagesFont[] }]
+  fontsMissing: [string[]]
   export: [{ format: ExportFormat | 'json'; result: unknown }]
   selectionChange: [string[]]
 }>()
@@ -97,7 +129,19 @@ const toolEpoch = ref(0)
 const selection = reactive(createSelection())
 const openPopoverId = ref<ToolId | null>(null)
 const saveName = ref('')
+const saveError = ref<string | null>(null)
 const pageEl = ref<HTMLElement | null>(null)
+const layoutEpoch = ref(0)
+const fontEpoch = ref(0)
+const missingFontsWarning = ref<string[] | null>(null)
+const fontFormLabel = ref('')
+const fontFormSource = ref('')
+const fontFormWeight = ref('')
+const fontFormStyle = ref<'normal' | 'italic'>('normal')
+const pendingDelete = ref<
+  { kind: 'layout'; name: string } | { kind: 'font'; id: string; label: string } | null
+>(null)
+const pendingOverwrite = ref<string | null>(null)
 const applyingJson = ref(false)
 const magnetEnabled = ref(true)
 const history = createHistory({ limit: 100 })
@@ -164,6 +208,23 @@ const layouts =
     activeName: props.layouts[0]?.name ?? 'Current',
   })
 
+const catalog: FontCatalog =
+  props.fontCatalog ??
+  createFontCatalog({
+    fonts: props.fonts,
+    includeBuiltins: false,
+  })
+
+catalog.on('fontsChange', (event) => {
+  fontEpoch.value += 1
+  emit('fontsChange', event)
+})
+
+const fonts = computed(() => {
+  fontEpoch.value
+  return catalog.list()
+})
+
 const exporter = createExporter({
   ...createBrowserExportAdapters(),
   ...props.exportAdapters,
@@ -207,16 +268,52 @@ tools.on('toolChange', (event) => {
   emit('toolChange', event)
 })
 tools.on('toolActivate', (event) => emit('toolActivate', event))
-layouts.on('layoutChange', (event) => emit('layoutChange', { name: event.activeName }))
+layouts.on('layoutChange', (event) => {
+  layoutEpoch.value += 1
+  activeLayoutName.value = event.activeName
+  emit('layoutChange', { name: event.activeName })
+})
 exporter.on('export', (event) => emit('export', event))
 
-const documentTools = computed(() => {
+const activeLayoutName = ref<string | null>(layouts.getActive()?.name ?? null)
+const layoutBaselineJson = ref(
+  (() => {
+    const active = layouts.getActive()
+    return active ? serializeDocument(active.document) : serializeDocument(props.modelValue)
+  })(),
+)
+
+const layoutDirty = computed(() => serializeDocument(props.modelValue) !== layoutBaselineJson.value)
+
+const layoutEntries = computed(() => {
+  layoutEpoch.value
+  const active = activeLayoutName.value
+  const dirty = layoutDirty.value
+  return layouts.list().map((layout) => ({
+    name: layout.name,
+    locked: layout.locked === true,
+    active: layout.name === active,
+    label: layout.name === active && dirty ? `${layout.name} *` : layout.name,
+  }))
+})
+
+function setLayoutBaselineFromActive() {
+  const active = layouts.getActive()
+  activeLayoutName.value = active?.name ?? null
+  layoutBaselineJson.value = active
+    ? serializeDocument(active.document)
+    : serializeDocument(props.modelValue)
+}
+
+const documentToolbarEntries = computed(() => {
   toolEpoch.value
   i18n.locale.value
-  return tools.list('document').map((tool) => ({
+  const order = props.documentToolbar ?? DEFAULT_DOCUMENT_TOOLBAR
+  const available = tools.list('document').map((tool) => ({
     ...tool,
     label: toolLabel(tool.id, tool.label),
   }))
+  return resolveToolbarEntries(order, available)
 })
 
 const selectedSections = computed(() =>
@@ -225,15 +322,16 @@ const selectedSections = computed(() =>
     .filter((s): s is NonNullable<typeof s> => Boolean(s)),
 )
 
-const selectionTools = computed(() => {
+const selectionToolbarEntries = computed(() => {
   toolEpoch.value
   i18n.locale.value
+  const order = props.selectionToolbar ?? DEFAULT_SELECTION_TOOLBAR
   const base = visibleSelectionTools(tools.list('selection'), selectedSections.value)
   const allLocked =
     selectedSections.value.length > 0 && selectedSections.value.every((s) => s.locked)
   const allHidden =
     selectedSections.value.length > 0 && selectedSections.value.every((s) => s.hidden)
-  return base.map((tool) => {
+  const available = base.map((tool) => {
     if (tool.id === 'section.lock' && allLocked) {
       return { ...tool, icon: 'lock-open', label: i18n.t('tools.section.unlock') }
     }
@@ -242,6 +340,7 @@ const selectionTools = computed(() => {
     }
     return { ...tool, label: toolLabel(tool.id, tool.label) }
   })
+  return resolveToolbarEntries(order, available)
 })
 
 const activeToolIds = computed(() => {
@@ -268,8 +367,6 @@ const currentPage = computed(() => {
   return page
 })
 
-const layoutNames = computed(() => layouts.list().map((l) => l.name))
-
 function emitSelection() {
   emit('selectionChange', [...selection.selectedSectionIds])
 }
@@ -294,7 +391,23 @@ function onEditingChange(editing: boolean) {
 
 function togglePopover(id: ToolId) {
   tools.activate(id)
-  openPopoverId.value = openPopoverId.value === id ? null : id
+  const next = openPopoverId.value === id ? null : id
+  openPopoverId.value = next
+  if (next !== 'layout.select' && next !== 'fonts.manage') {
+    pendingDelete.value = null
+  }
+  if (next === 'layout.save') {
+    prepareLayoutSaveForm()
+  } else {
+    pendingOverwrite.value = null
+  }
+}
+
+function prepareLayoutSaveForm() {
+  const active = layouts.getActive()
+  saveName.value = active && !active.locked ? active.name : ''
+  saveError.value = null
+  pendingOverwrite.value = null
 }
 
 function downloadDataUrl(dataUrl: string, filename: string) {
@@ -359,6 +472,7 @@ function activateTool(id: ToolId, payload?: unknown) {
     id === 'layout.select' ||
     id === 'layout.save' ||
     id === 'layout.exportJson' ||
+    id === 'fonts.manage' ||
     id === 'page.setup' ||
     id === 'section.add' ||
     id === 'section.style' ||
@@ -450,10 +564,94 @@ function selectLayout(name: string) {
   if (!chosen) return
   emit('update:modelValue', chosen.document)
   emit('update:json', serializeDocument(chosen.document))
+  setLayoutBaselineFromActive()
   clearSelection(selection)
   emitSelection()
+  const missing = missingFontFamilies(chosen.document, catalog.list())
+  if (missing.length > 0) {
+    missingFontsWarning.value = missing
+    emit('fontsMissing', missing)
+  } else {
+    missingFontsWarning.value = null
+  }
   openPopoverId.value = null
 }
+
+function dismissFontsMissing() {
+  missingFontsWarning.value = null
+}
+
+async function addFontFromForm() {
+  const label = fontFormLabel.value.trim()
+  const source = fontFormSource.value.trim()
+  if (!label || !source) return
+  const id = slugFontId(label)
+  const face = label
+  const font: OpenPagesFont = {
+    id,
+    label,
+    family: `'${face.replace(/'/g, '')}', sans-serif`,
+    faceName: face,
+    source,
+    locked: false,
+  }
+  if (fontFormWeight.value.trim()) font.weight = fontFormWeight.value.trim()
+  if (fontFormStyle.value === 'italic') font.style = 'italic'
+  const exists = catalog.list().some((entry) => entry.id === id)
+  if (props.beforeFontAdd) {
+    const allowed = await props.beforeFontAdd({ font, exists })
+    if (!allowed) return
+  }
+  const added = catalog.add(font)
+  if (!added) return
+  await loadOpenPagesFonts([added])
+  fontFormLabel.value = ''
+  fontFormSource.value = ''
+  fontFormWeight.value = ''
+  fontFormStyle.value = 'normal'
+}
+
+function removeFont(id: string) {
+  const font = catalog.list().find((entry) => entry.id === id)
+  if (!font) return
+  pendingDelete.value = { kind: 'font', id: font.id, label: font.label }
+}
+
+function removeLayout(name: string) {
+  pendingDelete.value = { kind: 'layout', name }
+}
+
+function cancelPendingDelete() {
+  pendingDelete.value = null
+}
+
+function confirmPendingDelete() {
+  const pending = pendingDelete.value
+  pendingDelete.value = null
+  if (!pending) return
+  if (pending.kind === 'font') {
+    catalog.remove(pending.id)
+    return
+  }
+  if (!layouts.remove(pending.name)) return
+  const active = layouts.getActive()
+  if (active) {
+    emit('update:modelValue', active.document)
+    emit('update:json', serializeDocument(active.document))
+  }
+  setLayoutBaselineFromActive()
+  clearSelection(selection)
+  emitSelection()
+}
+
+const pendingDeleteMessage = computed(() => {
+  const pending = pendingDelete.value
+  if (!pending) return ''
+  if (pending.kind === 'layout') {
+    return i18n.t('editor.confirmDeleteLayout', { name: pending.name })
+  }
+  return i18n.t('editor.confirmDeleteFont', { label: pending.label })
+})
 
 function applySetupPreset(preset: 'a4' | 'letter' | 'tabloid') {
   applyPagePreset(currentPage.value, preset)
@@ -533,7 +731,7 @@ function selectedFontId(): string {
   const section = primarySelected.value
   if (!section || (section.type !== 'text' && section.type !== 'headline')) return ''
   return (
-    matchCatalogFont(props.fonts, {
+    matchCatalogFont(fonts.value, {
       family: section.fontFamily,
       fontBold: section.fontBold,
     })?.id ?? ''
@@ -541,7 +739,7 @@ function selectedFontId(): string {
 }
 
 function onInspectorFontId(id: string) {
-  const font = props.fonts.find((entry) => entry.id === id)
+  const font = fonts.value.find((entry) => entry.id === id)
   if (!font) return
   patchSelectedTextStyle(applyCatalogFontSelection(font))
 }
@@ -557,12 +755,43 @@ function bumpSelectedFonts(delta: number) {
 
 const primarySelected = computed(() => selectedSections.value[0] ?? null)
 
-function saveCurrentLayout() {
+async function saveCurrentLayout(options: { confirmedOverwrite?: boolean } = {}) {
   const name = saveName.value.trim()
   if (!name) return
-  layouts.save(name, props.modelValue)
+  saveError.value = null
+  const existing = layouts.list().find((layout) => layout.name === name)
+  const overwritingOther =
+    Boolean(existing) && name !== activeLayoutName.value && existing?.locked !== true
+  if (overwritingOther && !options.confirmedOverwrite) {
+    pendingOverwrite.value = name
+    return
+  }
+  pendingOverwrite.value = null
+  const exists = Boolean(existing)
+  if (props.beforeLayoutSave) {
+    const allowed = await props.beforeLayoutSave({
+      name,
+      document: props.modelValue,
+      exists,
+    })
+    if (!allowed) return
+  }
+  const saved = layouts.save(name, props.modelValue)
+  if (!saved) {
+    saveError.value = i18n.t('editor.layoutLocked')
+    return
+  }
   saveName.value = ''
+  setLayoutBaselineFromActive()
   openPopoverId.value = null
+}
+
+function confirmOverwriteLayout() {
+  void saveCurrentLayout({ confirmedOverwrite: true })
+}
+
+function cancelOverwriteLayout() {
+  pendingOverwrite.value = null
 }
 
 function setToolEnabled(id: ToolId, enabled: boolean) {
@@ -581,8 +810,9 @@ defineExpose({
 <template>
   <div class="op-editor" data-op-editor>
     <OpenPagesToolbar
+      v-if="documentToolbarEntries"
       scope="document"
-      :tools="documentTools"
+      :entries="documentToolbarEntries"
       :open-popover-id="openPopoverId"
       :active-ids="activeToolIds"
       @activate="activateTool"
@@ -590,31 +820,99 @@ defineExpose({
     >
       <template #popover-layout-select>
         <p class="op-popover-title">{{ i18n.t('editor.layouts') }}</p>
-        <ul class="op-layout-list">
-          <li v-for="name in layoutNames" :key="name">
+        <div
+          v-if="pendingDelete?.kind === 'layout'"
+          class="op-delete-confirm"
+          data-op-delete-confirm
+          role="alertdialog"
+        >
+          <p class="op-delete-confirm-msg">{{ pendingDeleteMessage }}</p>
+          <div class="op-delete-confirm-actions">
+            <button
+              type="button"
+              class="op-save-btn"
+              data-op-delete-confirm-yes
+              @click="confirmPendingDelete"
+            >
+              {{ i18n.t('editor.confirmYes') }}
+            </button>
+            <button
+              type="button"
+              class="op-btn-secondary"
+              data-op-delete-confirm-no
+              @click="cancelPendingDelete"
+            >
+              {{ i18n.t('editor.confirmNo') }}
+            </button>
+          </div>
+        </div>
+        <ul v-else class="op-layout-list">
+          <li v-for="entry in layoutEntries" :key="entry.name" class="op-layout-row">
             <button
               type="button"
               class="op-layout-item"
-              :data-op-layout="name"
-              @click="selectLayout(name)"
+              :class="{ 'is-active': entry.active }"
+              :data-op-layout="entry.name"
+              :aria-current="entry.active ? 'true' : undefined"
+              @click="selectLayout(entry.name)"
             >
-              {{ name }}
+              {{ entry.label }}
+            </button>
+            <button
+              v-if="!entry.locked"
+              type="button"
+              class="op-layout-delete"
+              :data-op-layout-delete="entry.name"
+              :aria-label="i18n.t('editor.deleteLayout')"
+              @click.stop="removeLayout(entry.name)"
+            >
+              <Trash2 class="op-delete-icon" aria-hidden="true" />
             </button>
           </li>
         </ul>
       </template>
       <template #popover-layout-save>
         <p class="op-popover-title">{{ i18n.t('editor.saveLayout') }}</p>
-        <form class="op-save-form" @submit.prevent="saveCurrentLayout">
+        <div
+          v-if="pendingOverwrite"
+          class="op-delete-confirm"
+          data-op-overwrite-confirm
+          role="alertdialog"
+        >
+          <p class="op-delete-confirm-msg">
+            {{ i18n.t('editor.confirmOverwriteLayout', { name: pendingOverwrite }) }}
+          </p>
+          <div class="op-delete-confirm-actions">
+            <button
+              type="button"
+              class="op-save-btn"
+              data-op-overwrite-confirm-yes
+              @click="confirmOverwriteLayout"
+            >
+              {{ i18n.t('editor.confirmOverwriteYes') }}
+            </button>
+            <button
+              type="button"
+              class="op-btn-secondary"
+              data-op-overwrite-confirm-no
+              @click="cancelOverwriteLayout"
+            >
+              {{ i18n.t('editor.confirmNo') }}
+            </button>
+          </div>
+        </div>
+        <form v-else class="op-save-form" @submit.prevent="saveCurrentLayout()">
           <input
             v-model="saveName"
             class="op-save-input"
             type="text"
             :placeholder="i18n.t('editor.layoutName')"
             :aria-label="i18n.t('editor.layoutName')"
+            @input="saveError = null"
           />
           <button type="submit" class="op-save-btn">Save</button>
         </form>
+        <p v-if="saveError" class="op-save-error" data-op-save-error>{{ saveError }}</p>
       </template>
       <template #popover-layout-exportJson>
         <p class="op-popover-title">{{ i18n.t('editor.exportJson') }}</p>
@@ -635,6 +933,84 @@ defineExpose({
           >
             Download file
           </button>
+        </div>
+      </template>
+      <template #popover-fonts-manage>
+        <p class="op-popover-title">{{ i18n.t('editor.manageFonts') }}</p>
+        <div
+          v-if="pendingDelete?.kind === 'font'"
+          class="op-delete-confirm"
+          data-op-delete-confirm
+          role="alertdialog"
+        >
+          <p class="op-delete-confirm-msg">{{ pendingDeleteMessage }}</p>
+          <div class="op-delete-confirm-actions">
+            <button
+              type="button"
+              class="op-save-btn"
+              data-op-delete-confirm-yes
+              @click="confirmPendingDelete"
+            >
+              {{ i18n.t('editor.confirmYes') }}
+            </button>
+            <button
+              type="button"
+              class="op-btn-secondary"
+              data-op-delete-confirm-no
+              @click="cancelPendingDelete"
+            >
+              {{ i18n.t('editor.confirmNo') }}
+            </button>
+          </div>
+        </div>
+        <div v-else class="op-font-manage-body">
+          <ul class="op-font-list">
+            <li v-for="font in fonts" :key="font.id" class="op-font-row">
+              <span class="op-font-label" :data-op-font="font.id">{{ font.label }}</span>
+              <button
+                v-if="!font.locked"
+                type="button"
+                class="op-layout-delete"
+                :data-op-font-delete="font.id"
+                :aria-label="i18n.t('editor.deleteFont')"
+                @click="removeFont(font.id)"
+              >
+                <Trash2 class="op-delete-icon" aria-hidden="true" />
+              </button>
+            </li>
+          </ul>
+          <form class="op-font-add-form" data-op-font-add-form @submit.prevent="addFontFromForm">
+            <label class="op-field">
+              {{ i18n.t('editor.fontLabel') }}
+              <input v-model="fontFormLabel" data-op-font-label type="text" class="op-save-input" />
+            </label>
+            <label class="op-field">
+              {{ i18n.t('editor.fontSource') }}
+              <input
+                v-model="fontFormSource"
+                data-op-font-source
+                type="url"
+                class="op-save-input"
+              />
+            </label>
+            <label class="op-field">
+              {{ i18n.t('editor.fontWeight') }}
+              <input
+                v-model="fontFormWeight"
+                data-op-font-weight
+                type="text"
+                class="op-save-input"
+              />
+            </label>
+            <label class="op-field">
+              {{ i18n.t('editor.fontStyle') }}
+              <select v-model="fontFormStyle" data-op-font-style class="op-save-input">
+                <option value="normal">normal</option>
+                <option value="italic">italic</option>
+              </select>
+            </label>
+            <button type="submit" class="op-save-btn">{{ i18n.t('editor.addFont') }}</button>
+          </form>
         </div>
       </template>
       <template #popover-page-setup>
@@ -707,6 +1083,29 @@ defineExpose({
       </template>
     </OpenPagesToolbar>
 
+    <div
+      v-if="missingFontsWarning?.length"
+      class="op-fonts-missing"
+      data-op-fonts-missing
+      role="alert"
+    >
+      <p>
+        {{
+          i18n.t('editor.fontsMissing', {
+            fonts: missingFontsWarning.join(', '),
+          })
+        }}
+      </p>
+      <button
+        type="button"
+        class="op-save-btn"
+        data-op-fonts-missing-dismiss
+        @click="dismissFontsMissing"
+      >
+        {{ i18n.t('editor.dismissWarning') }}
+      </button>
+    </div>
+
     <div ref="pageEl" class="op-editor-canvas">
       <OpenPagesRenderer
         :document="modelValue"
@@ -723,8 +1122,9 @@ defineExpose({
       >
         <template #selection-chrome>
           <OpenPagesToolbar
+            v-if="selectionToolbarEntries"
             scope="selection"
-            :tools="selectionTools"
+            :entries="selectionToolbarEntries"
             :open-popover-id="openPopoverId"
             :active-ids="activeToolIds"
             @activate="activateTool"

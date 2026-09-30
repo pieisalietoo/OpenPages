@@ -1,0 +1,39 @@
+# Publish @openpages/vue to npm on version tags (trusted publisher / OIDC).
+# Requires Node >= 22.14, npm >= 11.5.1, and a Trusted Publisher on npmjs.com
+# configured for workflow filename publish.yml (exact match).
+name: Publish Package
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  id-token: write # OIDC for npm trusted publishing
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm --filter @openpages/vue build
+
+      - name: Publish
+        working-directory: packages/open-pages
+        run: npm publish --access public
+        # No NODE_AUTH_TOKEN — npm CLI uses GitHub OIDC when id-token: write is set.

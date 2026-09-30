@@ -75,7 +75,7 @@ pnpm install
 pnpm demo
 ```
 
-Opens at [http://localhost:5173](http://localhost:5173).
+Opens at [http://localhost:5180](http://localhost:5180).
 
 ## Development
 
@@ -153,8 +153,9 @@ export default defineConfig({
   plugins: [vue()],
   resolve: {
     alias: {
-      '@openpages/vue': path.join(openPagesRoot, 'src/index.ts'),
-      '@openpages/vue/style.css': path.join(openPagesRoot, 'src/style.css'),
+      // Point at the package `src/` directory (not `index.ts`), so
+      // `@openpages/vue/style.css` resolves correctly under Vite/Tailwind.
+      '@openpages/vue': path.join(openPagesRoot, 'src'),
     },
     // Critical: one Vue copy shared by host + OpenPages
     dedupe: ['vue'],

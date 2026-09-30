@@ -48,17 +48,14 @@ function textStub(id: string): Section {
 }
 
 describe('page setup + add + style tools', () => {
-  it('orders page.setup, section.add, then magnet after the document separator', () => {
+  it('orders section.add, magnet, then page.setup at the end of the document toolbar', () => {
     const wrapper = mount(OpenPagesEditor, {
       props: { modelValue: createDocument({ title: 'T' }) },
     })
     const bar = wrapper.get('[data-op-toolbar="document"]')
     const toolIds = bar.findAll('[data-op-tool]').map((el) => el.attributes('data-op-tool'))
-    expect(toolIds.slice(-3)).toEqual(['page.setup', 'section.add', 'view.magnet'])
-    const sep = bar.get('[data-op-toolbar-sep]')
-    expect(
-      sep.element.nextElementSibling?.querySelector('[data-op-tool="page.setup"]'),
-    ).toBeTruthy()
+    expect(toolIds.slice(-3)).toEqual(['section.add', 'view.magnet', 'page.setup'])
+    expect(bar.find('[data-op-toolbar-grow]').exists()).toBe(true)
   })
 
   it('page.setup popover applies preset and margins', async () => {

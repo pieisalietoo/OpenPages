@@ -92,11 +92,11 @@ describe('ctrl nudge + toolbar spacer + bindings', () => {
       props: { modelValue: doc },
       attachTo: document.body,
     })
-    expect(wrapper.find('[data-op-toolbar="selection"] [data-op-toolbar-spacer]').exists()).toBe(
-      false,
-    )
+    expect(wrapper.find('[data-op-toolbar="selection"]').exists()).toBe(false)
     await wrapper.get(`[data-op-section="${section.id}"]`).trigger('pointerdown', { button: 0 })
-    expect(wrapper.find('[data-op-selection-chrome] [data-op-toolbar-spacer]').exists()).toBe(true)
+    expect(wrapper.find('[data-op-selection-chrome] [data-op-toolbar="selection"]').exists()).toBe(
+      true,
+    )
     wrapper.unmount()
   })
 

@@ -73,4 +73,48 @@ describe('layout library', () => {
     })
     expect(lib.select('Nope')).toBeNull()
   })
+
+  it('treats missing locked as unlocked; respects locked:true on preload', () => {
+    const lib = createLayoutLibrary({
+      layouts: [
+        { name: 'Blank', document: createDocument({ title: 'Blank' }) },
+        { name: 'Pinned', document: createDocument({ title: 'Pinned' }), locked: true },
+      ],
+    })
+    const listed = lib.list()
+    expect(listed.find((l) => l.name === 'Blank')?.locked).toBe(false)
+    expect(listed.find((l) => l.name === 'Pinned')?.locked).toBe(true)
+  })
+
+  it('save overwrites an unlocked layout but refuses locked ones', () => {
+    const lib = createLayoutLibrary({
+      layouts: [
+        { name: 'Blank', document: createDocument({ title: 'Blank' }), locked: true },
+        { name: 'Draft', document: createDocument({ title: 'Draft' }) },
+      ],
+    })
+    const next = createDocument({ title: 'Next' })
+    expect(lib.save('Blank', next)).toBeNull()
+    expect(lib.select('Blank')?.document.meta.title).toBe('Blank')
+
+    expect(lib.save('Draft', next)?.document.meta.title).toBe('Next')
+    expect(lib.select('Draft')?.document.meta.title).toBe('Next')
+  })
+
+  it('remove deletes unlocked layouts and refuses locked or missing', () => {
+    const lib = createLayoutLibrary({
+      layouts: [
+        { name: 'Blank', document: createDocument({ title: 'Blank' }), locked: true },
+        { name: 'Draft', document: createDocument({ title: 'Draft' }) },
+      ],
+      activeName: 'Draft',
+    })
+    expect(lib.remove('Blank')).toBe(false)
+    expect(lib.list().map((l) => l.name)).toEqual(['Blank', 'Draft'])
+
+    expect(lib.remove('Draft')).toBe(true)
+    expect(lib.list().map((l) => l.name)).toEqual(['Blank'])
+    expect(lib.getActive()?.name).toBe('Blank')
+    expect(lib.remove('Nope')).toBe(false)
+  })
 })

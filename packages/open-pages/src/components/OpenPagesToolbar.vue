@@ -2,6 +2,7 @@
 import {
   ArrowDown,
   ArrowUp,
+  BookType,
   Braces,
   ChevronsDown,
   ChevronsUp,
@@ -22,16 +23,18 @@ import {
   Printer,
   Save,
   Settings,
+  SquarePlus,
   Trash2,
   Type,
   Ungroup,
 } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
+import type { ToolbarEntry } from '../tooling/toolbar-order'
 import type { ToolDefinition, ToolId, ToolScope } from '../tooling/tools'
 
 const props = defineProps<{
   scope: ToolScope
-  tools: ToolDefinition[]
+  entries: ToolbarEntry[]
   openPopoverId?: ToolId | null
   activeIds?: ToolId[]
 }>()
@@ -44,9 +47,10 @@ const emit = defineEmits<{
 const iconMap: Record<string, LucideIcon> = {
   'layout-template': LayoutTemplate,
   save: Save,
+  'book-type': BookType,
   braces: Braces,
   settings: Settings,
-  plus: Plus,
+  plus: SquarePlus,
   magnet: Magnet,
   printer: Printer,
   image: Image,
@@ -87,6 +91,7 @@ const popoverTools = new Set<ToolId>([
   'layout.select',
   'layout.save',
   'layout.exportJson',
+  'fonts.manage',
   'page.setup',
   'section.add',
   'section.style',
@@ -112,52 +117,51 @@ function isActive(id: ToolId): boolean {
 </script>
 
 <template>
-  <div
-    class="op-toolbar"
-    :class="{ 'op-toolbar--empty': tools.length === 0 }"
-    :data-op-toolbar="scope"
-    role="toolbar"
-    :aria-label="`${scope} tools`"
-  >
-    <span class="op-toolbar-spacer" data-op-toolbar-spacer aria-hidden="true" />
-    <template v-for="tool in tools" :key="tool.id">
+  <div class="op-toolbar" :data-op-toolbar="scope" role="toolbar" :aria-label="`${scope} tools`">
+    <template v-for="(entry, index) in entries" :key="`${entry.kind}-${index}`">
       <span
-        v-if="tool.id === 'page.setup'"
+        v-if="entry.kind === 'sep'"
         class="op-toolbar-sep"
         data-op-toolbar-sep
         aria-hidden="true"
       />
-      <div class="op-tool-wrap">
+      <span
+        v-else-if="entry.kind === 'grow'"
+        class="op-toolbar-grow"
+        data-op-toolbar-grow
+        aria-hidden="true"
+      />
+      <div v-else class="op-tool-wrap">
         <button
           type="button"
           class="op-tool-btn"
-          :class="{ 'is-active': isActive(tool.id) }"
-          :data-op-tool="tool.id"
-          :data-op-tool-icon="tool.icon"
-          :title="tool.label"
-          :aria-label="tool.label"
+          :class="{ 'is-active': isActive(entry.tool.id) }"
+          :data-op-tool="entry.tool.id"
+          :data-op-tool-icon="entry.tool.icon"
+          :title="entry.tool.label"
+          :aria-label="entry.tool.label"
           :aria-pressed="
-            tool.id === 'view.magnet' ||
-            tool.id === 'section.lock' ||
-            tool.id === 'section.hide'
-              ? isActive(tool.id)
+            entry.tool.id === 'view.magnet' ||
+            entry.tool.id === 'section.lock' ||
+            entry.tool.id === 'section.hide'
+              ? isActive(entry.tool.id)
                 ? 'true'
                 : 'false'
               : undefined
           "
-          :aria-expanded="openId === tool.id ? 'true' : undefined"
-          @click="onClick(tool)"
+          :aria-expanded="openId === entry.tool.id ? 'true' : undefined"
+          @click="onClick(entry.tool)"
         >
-          <component :is="iconFor(tool)" class="op-tool-icon" aria-hidden="true" />
+          <component :is="iconFor(entry.tool)" class="op-tool-icon" aria-hidden="true" />
         </button>
         <div
-          v-if="openId === tool.id"
+          v-if="openId === entry.tool.id"
           class="op-tool-popover"
-          :data-op-popover="tool.id"
+          :data-op-popover="entry.tool.id"
           role="dialog"
-          :aria-label="tool.label"
+          :aria-label="entry.tool.label"
         >
-          <slot :name="popoverSlotName(tool.id)" :tool="tool" />
+          <slot :name="popoverSlotName(entry.tool.id)" :tool="entry.tool" />
         </div>
       </div>
     </template>

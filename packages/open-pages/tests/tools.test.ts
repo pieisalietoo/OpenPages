@@ -8,6 +8,7 @@ describe('tool controller', () => {
     expect(ids).toContain('layout.select')
     expect(ids).toContain('layout.save')
     expect(ids).toContain('layout.exportJson')
+    expect(ids).toContain('fonts.manage')
     expect(ids).toContain('export.print')
     expect(ids).toContain('export.png')
     expect(ids).toContain('export.pdf')

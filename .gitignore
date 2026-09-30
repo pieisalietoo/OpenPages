@@ -35,3 +35,6 @@ Thumbs.db
 .idea/
 
 # tdd-evidence/ is tracked (red.txt / green.txt). Do not ignore that folder.
+tdd-evidence/_*.tmp
+tdd-evidence/repro-dom.mjs
+tdd-evidence/_chrome-probe/

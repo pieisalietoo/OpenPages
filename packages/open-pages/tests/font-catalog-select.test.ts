@@ -8,7 +8,7 @@ import {
 } from '../src/model/fonts'
 
 describe('catalog font selection by id / weight', () => {
-  const fonts = createFontCatalog({ fonts: DEMO_CUSTOM_FONTS })
+  const fonts = createFontCatalog({ fonts: DEMO_CUSTOM_FONTS }).list()
 
   it('distinguishes Literata regular vs bold despite the same CSS family', () => {
     const regular = matchCatalogFont(fonts, {

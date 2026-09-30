@@ -11,14 +11,15 @@ export default defineConfig({
   plugins: [vue(), tailwindcss()],
   resolve: {
     // Local DX: demo uses package sources (HMR), not dist.
+    // Alias the package root (src/), not index.ts — otherwise
+    // `@openpages/vue/style.css` resolves to `index.ts/style.css`.
     alias: {
-      '@openpages/vue': path.join(openPagesSrc, 'index.ts'),
-      '@openpages/vue/style.css': path.join(openPagesSrc, 'style.css'),
+      '@openpages/vue': openPagesSrc,
     },
     dedupe: ['vue'],
   },
   server: {
-    port: 5173,
+    port: 5180,
     fs: {
       allow: [openPagesSrc, path.resolve(root, '../..')],
     },

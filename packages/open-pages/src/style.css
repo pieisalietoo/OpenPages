@@ -246,26 +246,19 @@
   z-index: 60;
 }
 
-.op-toolbar-spacer {
-  display: inline-block;
-  box-sizing: border-box;
-  width: 0;
-  height: 1.75rem;
-  border: 1px solid transparent;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-  visibility: hidden;
-  pointer-events: none;
-  flex: 0 0 auto;
-}
-
 .op-toolbar-sep {
   align-self: stretch;
   width: 1px;
   margin: 0.2rem 0.35rem;
   background: color-mix(in srgb, var(--op-guide) 70%, transparent);
   flex: 0 0 auto;
+}
+
+.op-toolbar-grow {
+  flex: 1 1 auto;
+  min-width: 0.5rem;
+  align-self: stretch;
+  pointer-events: none;
 }
 
 .op-toolbar[data-op-toolbar="selection"] {
@@ -327,9 +320,16 @@
   list-style: none;
 }
 
+.op-layout-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.15rem;
+}
+
 .op-layout-item {
   display: block;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   padding: 0.35rem 0.4rem;
   border: 0;
   background: transparent;
@@ -342,9 +342,126 @@
   background: #eef4f0;
 }
 
+.op-layout-item.is-active {
+  background: #e2efe7;
+  font-weight: 600;
+}
+
+.op-layout-delete {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.2rem 0.35rem;
+  border: 0;
+  background: transparent;
+  color: #6b7c72;
+  font: inherit;
+  cursor: pointer;
+}
+
+.op-layout-delete:hover {
+  color: #a11;
+  background: #f6ecec;
+}
+
+.op-delete-icon {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+.op-delete-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 12rem;
+}
+
+.op-delete-confirm-msg {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #5c4a1f;
+}
+
+.op-delete-confirm-actions {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.op-btn-secondary {
+  padding: 0.3rem 0.55rem;
+  border: 1px solid #9aafa3;
+  background: #fff;
+  color: #14231c;
+  font: inherit;
+  cursor: pointer;
+}
+
 .op-save-form {
   display: flex;
   gap: 0.35rem;
+}
+
+.op-save-error {
+  margin: 0.35rem 0 0;
+  color: #a11;
+  font-size: 0.75rem;
+}
+
+.op-font-manage-body {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 0.75rem;
+  min-width: 22rem;
+}
+
+.op-font-list {
+  flex: 1 1 40%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 14rem;
+  overflow: auto;
+  min-width: 0;
+}
+
+.op-font-row {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0;
+}
+
+.op-font-label {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.8rem;
+}
+
+.op-font-add-form {
+  flex: 1 1 55%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.op-fonts-missing {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0.5rem 0.75rem 0;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid #d4b06a;
+  background: #fff8e8;
+  color: #5c4a1f;
+  font-size: 0.8rem;
+}
+
+.op-fonts-missing p {
+  margin: 0;
+  flex: 1;
 }
 
 .op-save-input {
@@ -372,6 +489,10 @@
 
 @media print {
   .op-toolbar {
+    display: none;
+  }
+
+  .op-fonts-missing {
     display: none;
   }
 
