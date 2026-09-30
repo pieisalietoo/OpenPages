@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2026-09-30
+
+### Fixed
+
+- npm publish GitHub Action: use `packageManager` from root `package.json` instead of a conflicting pnpm version pin in `publish.yml`.
+
 ## [0.2.0] - 2026-09-29
 
 ### Added
@@ -25,5 +31,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Host chrome: fonts catalog, i18n (`en` / `it`), layout library, export hooks (print / PNG / PDF).
 - Published `dist` build: ESM bundle, compiled CSS, and TypeScript declarations.
 
+[0.2.1]: https://github.com/pieisalietoo/OpenPages/releases/tag/v0.2.1
 [0.2.0]: https://github.com/pieisalietoo/OpenPages/releases/tag/v0.2.0
 [0.1.0]: https://github.com/pieisalietoo/OpenPages/releases/tag/v0.1.0

@@ -1,6 +1,6 @@
 {
   "name": "@openpages/vue",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Vue 3 layout engine for comics and newspaper-style pages",
   "type": "module",
   "license": "MIT",
