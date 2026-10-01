@@ -76,6 +76,7 @@ describe('default toolbar orders', () => {
       'section.style',
       'section.font',
       'section.columns',
+      'section.runaround',
       'section.lock',
       'section.hide',
       'section.duplicate',

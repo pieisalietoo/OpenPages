@@ -42,6 +42,7 @@ describe('visible selection tools', () => {
       content: id,
       locked: false,
       hidden: false,
+      runaround: false,
       groupId: null,
       backgroundColor: 'transparent',
       color: '#1a1a1a',
@@ -56,6 +57,8 @@ describe('visible selection tools', () => {
       columnCount: 1,
       lineHeight: 1.4,
       textFit: 'none',
+      textAlign: 'left',
+      verticalAlign: 'top',
     }
   }
 
@@ -72,6 +75,7 @@ describe('visible selection tools', () => {
       fit: 'cover',
       locked: false,
       hidden: false,
+      runaround: false,
       groupId: null,
       backgroundColor: 'transparent',
       color: '#1a1a1a',

@@ -212,14 +212,61 @@
 
 .op-resize-handle {
   position: absolute;
-  right: -5px;
-  bottom: -5px;
   width: 10px;
   height: 10px;
   padding: 0;
   border: 1px solid var(--op-selection);
   background: #fff;
+  box-sizing: border-box;
+  z-index: 20;
+}
+
+.op-resize-handle--nw {
+  left: -5px;
+  top: -5px;
   cursor: nwse-resize;
+}
+
+.op-resize-handle--n {
+  left: calc(50% - 5px);
+  top: -5px;
+  cursor: ns-resize;
+}
+
+.op-resize-handle--ne {
+  right: -5px;
+  top: -5px;
+  cursor: nesw-resize;
+}
+
+.op-resize-handle--e {
+  right: -5px;
+  top: calc(50% - 5px);
+  cursor: ew-resize;
+}
+
+.op-resize-handle--se {
+  right: -5px;
+  bottom: -5px;
+  cursor: nwse-resize;
+}
+
+.op-resize-handle--s {
+  left: calc(50% - 5px);
+  bottom: -5px;
+  cursor: ns-resize;
+}
+
+.op-resize-handle--sw {
+  left: -5px;
+  bottom: -5px;
+  cursor: nesw-resize;
+}
+
+.op-resize-handle--w {
+  left: -5px;
+  top: calc(50% - 5px);
+  cursor: ew-resize;
 }
 
 .op-editor {
@@ -227,6 +274,82 @@
   flex-direction: column;
   gap: 0;
   min-width: 0;
+}
+
+.op-page-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.5rem 0.7rem;
+}
+
+.op-page-nav button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.75rem;
+  height: 1.75rem;
+  padding: 0 0.35rem;
+  border: 1px solid color-mix(in srgb, var(--op-guide) 70%, transparent);
+  background: #fff;
+  color: var(--op-accent);
+  cursor: pointer;
+}
+
+.op-page-nav button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.op-page-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.op-page-num,
+.op-page-total,
+.op-page-sep {
+  font-variant-numeric: tabular-nums;
+}
+
+.op-page-jump {
+  width: 2.6rem;
+  height: 1.75rem;
+  box-sizing: border-box;
+  text-align: center;
+  font: inherit;
+  border: 1px solid var(--op-accent);
+  background: #fff;
+}
+
+.op-page-add {
+  position: relative;
+  display: flex;
+  margin-left: 0.35rem;
+}
+
+.op-page-add-menu {
+  position: absolute;
+  bottom: calc(100% + 0.3rem);
+  left: 0;
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 12rem;
+  padding: 0.35rem;
+  background: #fff;
+  border: 1px solid color-mix(in srgb, var(--op-guide) 55%, transparent);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 12%);
+}
+
+.op-page-add-menu button {
+  justify-content: flex-start;
+  width: 100%;
+  height: auto;
+  padding: 0.35rem 0.5rem;
+  white-space: nowrap;
 }
 
 .op-toolbar {
@@ -318,6 +441,11 @@
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.op-layout-export {
+  width: 100%;
+  margin-top: 0.5rem;
 }
 
 .op-layout-row {
@@ -488,7 +616,8 @@
 }
 
 @media print {
-  .op-toolbar {
+  .op-toolbar,
+  .op-page-nav {
     display: none;
   }
 
@@ -616,10 +745,16 @@
 }
 
 .op-page-presets,
-.op-add-types {
+.op-add-types,
+.op-align-row {
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem;
+}
+
+.op-align-row .op-save-btn.is-active {
+  outline: 2px solid var(--op-selection);
+  outline-offset: 1px;
 }
 
 .op-field {

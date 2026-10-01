@@ -6,6 +6,8 @@ export type SectionType = 'text' | 'headline' | 'image' | 'panel' | 'runaround'
 
 export type ImageFit = 'cover' | 'contain' | 'fill'
 export type PanelBorderStyle = 'ink' | 'double' | 'rounded'
+export type TextAlign = 'left' | 'center' | 'right' | 'stretch'
+export type VerticalAlign = 'top' | 'middle' | 'bottom'
 
 export interface SectionBase {
   id: string
@@ -15,6 +17,8 @@ export interface SectionBase {
   height: number
   locked: boolean
   hidden: boolean
+  /** When true, this section excludes text of other frames (not its own). */
+  runaround: boolean
   groupId: string | null
   backgroundColor: string
   color: string
@@ -34,6 +38,8 @@ export interface TextSection extends SectionBase {
   columnCount: number
   lineHeight: number
   textFit: TextFitMode
+  textAlign: TextAlign
+  verticalAlign: VerticalAlign
 }
 
 export interface HeadlineSection extends SectionBase {
@@ -48,6 +54,8 @@ export interface HeadlineSection extends SectionBase {
   columnCount: number
   lineHeight: number
   textFit: TextFitMode
+  textAlign: TextAlign
+  verticalAlign: VerticalAlign
 }
 
 export interface ImageSection extends SectionBase {
@@ -133,6 +141,8 @@ export const DEFAULT_TEXT_STYLE = {
   columnCount: 1,
   lineHeight: 1.4,
   textFit: 'none' as TextFitMode,
+  textAlign: 'left' as TextAlign,
+  verticalAlign: 'top' as VerticalAlign,
 } as const
 
 export const DEFAULT_HEADLINE_STYLE = {
@@ -145,12 +155,15 @@ export const DEFAULT_HEADLINE_STYLE = {
   columnCount: 1,
   lineHeight: 1.15,
   textFit: 'none' as TextFitMode,
+  textAlign: 'left' as TextAlign,
+  verticalAlign: 'top' as VerticalAlign,
 } as const
 
 function defaultChrome() {
   return {
     locked: false,
     hidden: false,
+    runaround: false,
     groupId: null as string | null,
     ...DEFAULT_SECTION_STYLE,
   }
@@ -327,6 +340,7 @@ export function duplicateSection(
   created.color = original.color
   created.borderColor = original.borderColor
   created.borderWidth = original.borderWidth
+  created.runaround = original.runaround
   if (
     (created.type === 'text' || created.type === 'headline') &&
     (original.type === 'text' || original.type === 'headline')
@@ -340,6 +354,8 @@ export function duplicateSection(
     created.columnCount = original.columnCount
     created.lineHeight = original.lineHeight
     created.textFit = original.textFit
+    created.textAlign = original.textAlign
+    created.verticalAlign = original.verticalAlign
   }
   return created
 }
@@ -361,6 +377,8 @@ export type TextStylePatch = {
   columnCount?: number
   lineHeight?: number
   textFit?: TextFitMode
+  textAlign?: TextAlign
+  verticalAlign?: VerticalAlign
 }
 
 export function bumpFontSizes(sizes: number[], delta: number): number[] {
@@ -414,6 +432,18 @@ export function updateTextStyle(
   }
   if (patch.textFit !== undefined) {
     section.textFit = patch.textFit === 'fill' ? 'fill' : 'none'
+  }
+  if (patch.textAlign !== undefined) {
+    section.textAlign =
+      patch.textAlign === 'center' || patch.textAlign === 'right' || patch.textAlign === 'stretch'
+        ? patch.textAlign
+        : 'left'
+  }
+  if (patch.verticalAlign !== undefined) {
+    section.verticalAlign =
+      patch.verticalAlign === 'middle' || patch.verticalAlign === 'bottom'
+        ? patch.verticalAlign
+        : 'top'
   }
   return true
 }
@@ -523,6 +553,19 @@ export function setSectionHidden(
   return true
 }
 
+export function setSectionRunaround(
+  page: { sections: Section[] },
+  sectionId: string,
+  runaround: boolean,
+): boolean {
+  const section = findSection(page, sectionId)
+  if (!section || section.type === 'runaround') {
+    return false
+  }
+  section.runaround = runaround
+  return true
+}
+
 export function bringForward(page: { sections: Section[] }, sectionId: string): boolean {
   const index = page.sections.findIndex((section) => section.id === sectionId)
   if (index < 0 || index >= page.sections.length - 1) {
@@ -567,6 +610,16 @@ function requireString(record: Record<string, unknown>, key: string, path: strin
   return value
 }
 
+function parseTextAlign(value: unknown): TextAlign {
+  if (value === 'center' || value === 'right' || value === 'stretch') return value
+  return 'left'
+}
+
+function parseVerticalAlign(value: unknown): VerticalAlign {
+  if (value === 'middle' || value === 'bottom') return value
+  return 'top'
+}
+
 export function parseSection(value: unknown, index: number): Section {
   const path = `sections[${index}]`
   if (!isRecord(value)) {
@@ -581,6 +634,7 @@ export function parseSection(value: unknown, index: number): Section {
     height: requireNumber(value, 'height', path),
     locked: value.locked === true,
     hidden: value.hidden === true,
+    runaround: value.runaround === true,
     groupId: typeof value.groupId === 'string' ? value.groupId : null,
     backgroundColor:
       typeof value.backgroundColor === 'string'
@@ -620,6 +674,8 @@ export function parseSection(value: unknown, index: number): Section {
             ? value.lineHeight
             : DEFAULT_TEXT_STYLE.lineHeight,
         textFit: value.textFit === 'fill' ? 'fill' : 'none',
+        textAlign: parseTextAlign(value.textAlign),
+        verticalAlign: parseVerticalAlign(value.verticalAlign),
       }
     case 'headline':
       return {
@@ -650,6 +706,8 @@ export function parseSection(value: unknown, index: number): Section {
             ? value.lineHeight
             : DEFAULT_HEADLINE_STYLE.lineHeight,
         textFit: value.textFit === 'fill' ? 'fill' : 'none',
+        textAlign: parseTextAlign(value.textAlign),
+        verticalAlign: parseVerticalAlign(value.verticalAlign),
       }
     case 'image': {
       const fit = value.fit

@@ -13,6 +13,7 @@ describe('tool controller', () => {
     expect(ids).toContain('export.png')
     expect(ids).toContain('export.pdf')
     expect(ids).toContain('section.lock')
+    expect(ids).toContain('section.runaround')
     expect(ids).toContain('section.hide')
     expect(ids).toContain('section.duplicate')
     expect(ids).toContain('section.delete')

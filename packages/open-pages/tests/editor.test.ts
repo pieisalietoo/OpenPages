@@ -59,6 +59,26 @@ describe('OpenPagesEditor chrome', () => {
     expect(emitted?.at(-1)?.[0]).toMatchObject({ meta: { title: 'Feature Lab' } })
   })
 
+  it('exports current layout JSON from the layout list menu', async () => {
+    const doc = createDocument({ title: 'Export Me' })
+    const wrapper = mount(OpenPagesEditor, {
+      props: { modelValue: doc },
+    })
+
+    await wrapper.get('[data-op-tool="layout.select"]').trigger('click')
+    const exportBtn = wrapper.get('[data-op-popover="layout.select"] [data-op-layout-export]')
+    expect(exportBtn.text()).toMatch(/export/i)
+    await exportBtn.trigger('click')
+
+    const exported = wrapper.emitted('export')?.at(-1)?.[0] as
+      | { format: string; result: string }
+      | undefined
+    expect(exported?.format).toBe('json')
+    expect(exported?.result).toContain('"schemaVersion"')
+    expect(exported?.result).toContain('Export Me')
+    expect(wrapper.find('[data-op-popover="layout.select"]').exists()).toBe(false)
+  })
+
   it('exposes activateTool for external hosts and emits toolActivate', async () => {
     const wrapper = mount(OpenPagesEditor, {
       props: {

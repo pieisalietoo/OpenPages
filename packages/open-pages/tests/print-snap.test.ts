@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createBrowserExportAdapters, createExporter } from '../src/export/exporters'
-import { snapSectionPosition } from '../src/model/snap'
+import { snapSectionPosition, snapSectionSize } from '../src/model/snap'
 
 describe('workspace print', () => {
   it('print requires a page element and passes it to the adapter', async () => {
@@ -120,5 +120,60 @@ describe('magnet snap', () => {
     // after b (90) + gap 20 → x = 110
     expect(result.x).toBe(110)
     expect(result.guides.some((g) => g.kind === 'gap')).toBe(true)
+  })
+
+  it('snaps a resize to another section edge and shows an alignment guide', () => {
+    const other = { id: 'panel-b', x: 200, y: 40, width: 50, height: 40 }
+    const options = { enabled: true, shiftKey: false, threshold: 6 }
+
+    const widthSnap = snapSectionSize(
+      { x: 10, y: 40 },
+      { width: 188, height: 40 },
+      [other],
+      page,
+      options,
+    )
+    expect(widthSnap.width).toBe(190)
+    expect(widthSnap.height).toBe(40)
+    expect(widthSnap.guides).toContainEqual(
+      expect.objectContaining({
+        kind: 'align',
+        orientation: 'vertical',
+        position: 200,
+        targetIds: ['panel-b'],
+      }),
+    )
+
+    const heightSnap = snapSectionSize(
+      { x: 10, y: 10 },
+      { width: 40, height: 68 },
+      [other],
+      page,
+      options,
+    )
+    expect(heightSnap.height).toBe(70)
+    expect(heightSnap.guides).toContainEqual(
+      expect.objectContaining({
+        kind: 'align',
+        orientation: 'horizontal',
+        position: 80,
+        targetIds: ['panel-b'],
+      }),
+    )
+  })
+
+  it('does not snap a resize when magnet is off or Shift is held', () => {
+    const proposed = { width: 186, height: 36 }
+    const off = snapSectionSize({ x: 10, y: 40 }, proposed, [], page, {
+      enabled: false,
+      shiftKey: false,
+    })
+    expect(off).toEqual({ ...proposed, guides: [] })
+
+    const shift = snapSectionSize({ x: 10, y: 40 }, proposed, [], page, {
+      enabled: true,
+      shiftKey: true,
+    })
+    expect(shift).toEqual({ ...proposed, guides: [] })
   })
 })

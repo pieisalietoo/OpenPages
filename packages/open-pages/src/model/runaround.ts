@@ -62,3 +62,40 @@ export function relativeExclusionsForHost(
   }
   return result.sort((a, b) => a.y - b.y || a.x - b.x)
 }
+
+type RunaroundSource = {
+  id: string
+  type: string
+  x: number
+  y: number
+  width: number
+  height: number
+  hidden?: boolean
+  runaround?: boolean
+  wrapOffset?: number
+}
+
+export function sectionActsAsRunaround(section: RunaroundSource): boolean {
+  return section.type === 'runaround' || section.runaround === true
+}
+
+/** Zones that wrap text for `hostId`, excluding the host itself. */
+export function runaroundZonesForHost(
+  sections: RunaroundSource[],
+  hostId: string,
+): RunaroundZoneRect[] {
+  return sections
+    .filter((section) => section.id !== hostId && sectionActsAsRunaround(section))
+    .map((section) => ({
+      id: section.id,
+      x: section.x,
+      y: section.y,
+      width: section.width,
+      height: section.height,
+      hidden: section.hidden,
+      wrapOffset:
+        section.type === 'runaround' && typeof section.wrapOffset === 'number'
+          ? section.wrapOffset
+          : DEFAULT_WRAP_OFFSET,
+    }))
+}

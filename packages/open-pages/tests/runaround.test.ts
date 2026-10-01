@@ -3,8 +3,17 @@ import { describe, expect, it } from 'vitest'
 import OpenPagesEditor from '../src/components/OpenPagesEditor.vue'
 import OpenPagesRenderer from '../src/components/OpenPagesRenderer.vue'
 import { createDocument, parseDocument, serializeDocument } from '../src/model/document'
-import { DEFAULT_WRAP_OFFSET, relativeExclusionsForHost } from '../src/model/runaround'
-import { addRunaroundSection, addTextSection, duplicateSection } from '../src/model/section'
+import {
+  DEFAULT_WRAP_OFFSET,
+  relativeExclusionsForHost,
+  runaroundZonesForHost,
+} from '../src/model/runaround'
+import {
+  addPanelSection,
+  addRunaroundSection,
+  addTextSection,
+  duplicateSection,
+} from '../src/model/section'
 
 function firstPage(doc: ReturnType<typeof createDocument>) {
   const page = doc.pages[0]
@@ -119,5 +128,86 @@ describe('runaround sections', () => {
     await wrapper.get('[data-op-tool="section.add"]').trigger('click')
     await wrapper.get('[data-op-add-type="runaround"]').trigger('click')
     expect(page.sections.map((s) => s.type)).toEqual(['runaround'])
+  })
+
+  it('toggles runaround on a panel so neighboring text wraps around it, not around itself', async () => {
+    const doc = createDocument({ title: 'Toggle wrap' })
+    const page = firstPage(doc)
+    const text = addTextSection(page, {
+      x: 0,
+      y: 0,
+      width: 300,
+      height: 300,
+      content:
+        'Alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu nu xi omicron pi rho.',
+    })
+    const panel = addPanelSection(page, {
+      x: 100,
+      y: 40,
+      width: 100,
+      height: 80,
+      borderStyle: 'ink',
+    })
+    expect(panel.runaround).toBe(false)
+
+    const editor = mount(OpenPagesEditor, { props: { modelValue: doc } })
+    await editor.get(`[data-op-section="${panel.id}"]`).trigger('pointerdown', {
+      button: 0,
+      clientX: 110,
+      clientY: 50,
+    })
+    expect(editor.find('[data-op-tool="section.runaround"]').exists()).toBe(true)
+    expect(editor.get('[data-op-tool="section.runaround"]').attributes('aria-pressed')).toBe(
+      'false',
+    )
+    await editor.get('[data-op-tool="section.runaround"]').trigger('click')
+    expect(panel.runaround).toBe(true)
+    expect(editor.get('[data-op-tool="section.runaround"]').attributes('aria-pressed')).toBe('true')
+    editor.unmount()
+
+    const wrapper = mount(OpenPagesRenderer, {
+      props: { document: doc, pageId: page.id },
+    })
+    const hole = { x: 100, y: 40, width: 100, height: 80 }
+    const lines = wrapper.findAll('[data-op-line]')
+    expect(lines.length).toBeGreaterThan(0)
+    for (const line of lines) {
+      const style = line.attributes('style') ?? ''
+      const left = Number(/left:\s*([\d.]+)px/.exec(style)?.[1] ?? NaN)
+      const top = Number(/top:\s*([\d.]+)px/.exec(style)?.[1] ?? NaN)
+      const width = Number(/width:\s*([\d.]+)px/.exec(style)?.[1] ?? NaN)
+      const height = Number(/height:\s*([\d.]+)px/.exec(style)?.[1] ?? NaN)
+      expect(overlaps({ x: left, y: top, width, height }, hole)).toBe(false)
+    }
+    expect(wrapper.find(`[data-op-section="${text.id}"]`).exists()).toBe(true)
+  })
+
+  it('does not treat a text frame itself as its own runaround exclusion', () => {
+    const zones = runaroundZonesForHost(
+      [
+        {
+          id: 'self',
+          type: 'text',
+          x: 0,
+          y: 0,
+          width: 200,
+          height: 200,
+          runaround: true,
+          hidden: false,
+        },
+        {
+          id: 'other',
+          type: 'panel',
+          x: 40,
+          y: 40,
+          width: 60,
+          height: 60,
+          runaround: true,
+          hidden: false,
+        },
+      ],
+      'self',
+    )
+    expect(zones.map((z) => z.id)).toEqual(['other'])
   })
 })

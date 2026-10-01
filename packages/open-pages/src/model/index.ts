@@ -60,6 +60,7 @@ export {
   PAGE_PRESETS,
   setPageMargins,
 } from './page'
+export { addBlankPage, deletePage, duplicatePage, movePage } from './pages'
 export type {
   Rect as RunaroundRect,
   RelativeExclusion,
@@ -70,6 +71,8 @@ export {
   inflateRect,
   intersectRects,
   relativeExclusionsForHost,
+  runaroundZonesForHost,
+  sectionActsAsRunaround,
 } from './runaround'
 export { sanitizeTextHtml } from './sanitize-html'
 export type {
@@ -88,7 +91,9 @@ export type {
   Section,
   SectionBase,
   SectionType,
+  TextAlign,
   TextSection,
+  VerticalAlign,
 } from './section'
 export {
   addHeadlineSection,
@@ -112,6 +117,7 @@ export {
   sendToBack,
   setSectionHidden,
   setSectionLocked,
+  setSectionRunaround,
   ungroupSections,
   updateSectionStyle,
   updateTextStyle,
@@ -126,6 +132,7 @@ export {
   toggleSectionSelection,
 } from './selection'
 export type {
+  ResizeHandle,
   SnapAlignGuide,
   SnapGapGuide,
   SnapGuide,
@@ -134,7 +141,14 @@ export type {
   SnapRect,
   SnapResult,
 } from './snap'
-export { DEFAULT_SNAP_THRESHOLD, snapSectionPosition } from './snap'
+export {
+  DEFAULT_SNAP_THRESHOLD,
+  proposedBoxForResizeHandle,
+  resizeHandleLocks,
+  snapSectionBox,
+  snapSectionPosition,
+  snapSectionSize,
+} from './snap'
 export {
   deletePlainRange,
   insertPlainText,

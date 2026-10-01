@@ -427,3 +427,232 @@ export function snapSectionPosition(
     guides,
   }
 }
+
+type SizeCandidate = {
+  delta: number
+  size: number
+  guide: SnapAlignGuide
+}
+
+function preferSize(best: SizeCandidate, candidate: SizeCandidate): SizeCandidate {
+  if (candidate.delta < best.delta) return candidate
+  if (candidate.delta > best.delta) return best
+  if (candidate.guide.position === best.guide.position) {
+    return {
+      delta: best.delta,
+      size: best.size,
+      guide: {
+        kind: 'align',
+        orientation: best.guide.orientation,
+        position: best.guide.position,
+        targetIds: [...new Set([...best.guide.targetIds, ...candidate.guide.targetIds])],
+      },
+    }
+  }
+  if (candidate.guide.targetIds.length > best.guide.targetIds.length) return candidate
+  return best
+}
+
+function bestResizeAxis(
+  origin: number,
+  proposedSize: number,
+  targets: PositionTarget[],
+  threshold: number,
+  orientation: 'horizontal' | 'vertical',
+): SizeCandidate | null {
+  const samples = [
+    { at: origin + proposedSize, sizeFor: (target: number) => target - origin },
+    { at: origin + proposedSize / 2, sizeFor: (target: number) => (target - origin) * 2 },
+  ]
+  let best: SizeCandidate | null = null
+  for (const sample of samples) {
+    for (const target of targets) {
+      const delta = Math.abs(sample.at - target.position)
+      if (delta > threshold) continue
+      const size = sample.sizeFor(target.position)
+      if (size < 1) continue
+      const candidate: SizeCandidate = {
+        delta,
+        size,
+        guide: {
+          kind: 'align',
+          orientation,
+          position: target.position,
+          targetIds: target.targetIds,
+        },
+      }
+      best = best ? preferSize(best, candidate) : candidate
+    }
+  }
+  return best
+}
+
+export function snapSectionSize(
+  anchor: { x: number; y: number },
+  proposed: { width: number; height: number },
+  others: SnapRect[],
+  page: SnapPage,
+  options: SnapOptions,
+): { width: number; height: number; guides: SnapGuide[] } {
+  const box = snapSectionBox(
+    { x: anchor.x, y: anchor.y, width: proposed.width, height: proposed.height },
+    { left: true, top: true, right: false, bottom: false },
+    others,
+    page,
+    options,
+  )
+  return { width: box.width, height: box.height, guides: box.guides }
+}
+
+type EdgeLocks = { left: boolean; top: boolean; right: boolean; bottom: boolean }
+
+type EdgeCandidate = {
+  delta: number
+  moving: number
+  size: number
+  guide: SnapAlignGuide
+}
+
+function preferEdge(best: EdgeCandidate, candidate: EdgeCandidate): EdgeCandidate {
+  if (candidate.delta < best.delta) return candidate
+  if (candidate.delta > best.delta) return best
+  if (candidate.guide.position === best.guide.position) {
+    return {
+      delta: best.delta,
+      moving: best.moving,
+      size: best.size,
+      guide: {
+        kind: 'align',
+        orientation: best.guide.orientation,
+        position: best.guide.position,
+        targetIds: [...new Set([...best.guide.targetIds, ...candidate.guide.targetIds])],
+      },
+    }
+  }
+  if (candidate.guide.targetIds.length > best.guide.targetIds.length) return candidate
+  return best
+}
+
+/** Snap a free edge toward `fixed`, keeping the fixed edge in place. */
+function bestEdgeAgainstFixed(
+  fixed: number,
+  moving: number,
+  targets: PositionTarget[],
+  threshold: number,
+  orientation: 'horizontal' | 'vertical',
+): EdgeCandidate | null {
+  const samples = [
+    { at: moving, movingFor: (target: number) => target },
+    { at: (moving + fixed) / 2, movingFor: (target: number) => 2 * target - fixed },
+  ]
+  let best: EdgeCandidate | null = null
+  for (const sample of samples) {
+    for (const target of targets) {
+      const delta = Math.abs(sample.at - target.position)
+      if (delta > threshold) continue
+      const nextMoving = sample.movingFor(target.position)
+      const size = Math.abs(fixed - nextMoving)
+      if (size < 1) continue
+      const candidate: EdgeCandidate = {
+        delta,
+        moving: nextMoving,
+        size,
+        guide: {
+          kind: 'align',
+          orientation,
+          position: target.position,
+          targetIds: target.targetIds,
+        },
+      }
+      best = best ? preferEdge(best, candidate) : candidate
+    }
+  }
+  return best
+}
+
+export function snapSectionBox(
+  proposed: { x: number; y: number; width: number; height: number },
+  locks: EdgeLocks,
+  others: SnapRect[],
+  page: SnapPage,
+  options: SnapOptions,
+): { x: number; y: number; width: number; height: number; guides: SnapGuide[] } {
+  if (!options.enabled || options.shiftKey) {
+    return { ...proposed, guides: [] }
+  }
+
+  const threshold = options.threshold ?? DEFAULT_SNAP_THRESHOLD
+  let { x, y, width, height } = proposed
+  const guides: SnapGuide[] = []
+
+  if (locks.left && !locks.right) {
+    const xBest = bestResizeAxis(x, width, xTargets(page, others), threshold, 'vertical')
+    if (xBest) {
+      width = xBest.size
+      guides.push(xBest.guide)
+    }
+  } else if (!locks.left && locks.right) {
+    const right = x + width
+    const xBest = bestEdgeAgainstFixed(right, x, xTargets(page, others), threshold, 'vertical')
+    if (xBest) {
+      x = Math.min(xBest.moving, right - 1)
+      width = right - x
+      guides.push(xBest.guide)
+    }
+  }
+
+  if (locks.top && !locks.bottom) {
+    const yBest = bestResizeAxis(y, height, yTargets(page, others), threshold, 'horizontal')
+    if (yBest) {
+      height = yBest.size
+      guides.push(yBest.guide)
+    }
+  } else if (!locks.top && locks.bottom) {
+    const bottom = y + height
+    const yBest = bestEdgeAgainstFixed(bottom, y, yTargets(page, others), threshold, 'horizontal')
+    if (yBest) {
+      y = Math.min(yBest.moving, bottom - 1)
+      height = bottom - y
+      guides.push(yBest.guide)
+    }
+  }
+
+  return { x, y, width: Math.max(1, width), height: Math.max(1, height), guides }
+}
+
+export type ResizeHandle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w'
+
+export function resizeHandleLocks(handle: ResizeHandle): EdgeLocks {
+  return {
+    left: handle !== 'w' && !handle.includes('w'),
+    right: handle !== 'e' && !handle.includes('e'),
+    top: handle !== 'n' && !handle.includes('n'),
+    bottom: handle !== 's' && !handle.includes('s'),
+  }
+}
+
+export function proposedBoxForResizeHandle(
+  origin: { x: number; y: number; width: number; height: number },
+  dx: number,
+  dy: number,
+  handle: ResizeHandle,
+): { x: number; y: number; width: number; height: number } {
+  let { x, y, width, height } = origin
+  const right = x + width
+  const bottom = y + height
+  if (handle.includes('e') || handle === 'e') {
+    width = Math.max(1, origin.width + dx)
+  }
+  if (handle.includes('w') || handle === 'w') {
+    x = Math.min(origin.x + dx, right - 1)
+    width = right - x
+  }
+  if (handle.includes('s') || handle === 's') {
+    height = Math.max(1, origin.height + dy)
+  }
+  if (handle.includes('n') || handle === 'n') {
+    y = Math.min(origin.y + dy, bottom - 1)
+    height = bottom - y
+  }
+  return { x, y, width, height }
+}

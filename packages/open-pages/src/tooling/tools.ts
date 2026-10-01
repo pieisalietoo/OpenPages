@@ -14,6 +14,7 @@ export type BuiltinToolId =
   | 'section.style'
   | 'section.font'
   | 'section.columns'
+  | 'section.runaround'
   | 'section.lock'
   | 'section.hide'
   | 'section.duplicate'
@@ -63,6 +64,7 @@ export const BUILTIN_TOOLS: ReadonlyArray<Omit<ToolDefinition, 'enabled'>> = [
   { id: 'section.style', scope: 'selection', label: 'Colors', icon: 'palette' },
   { id: 'section.font', scope: 'selection', label: 'Font', icon: 'type' },
   { id: 'section.columns', scope: 'selection', label: 'Columns', icon: 'columns-2' },
+  { id: 'section.runaround', scope: 'selection', label: 'Runaround', icon: 'text-square' },
   { id: 'section.lock', scope: 'selection', label: 'Lock', icon: 'lock' },
   { id: 'section.hide', scope: 'selection', label: 'Hide', icon: 'eye-off' },
   { id: 'section.duplicate', scope: 'selection', label: 'Duplicate', icon: 'copy' },

@@ -36,6 +36,7 @@ export const DEFAULT_SELECTION_TOOLBAR: readonly ToolbarItemId[] = [
   'section.style',
   'section.font',
   'section.columns',
+  'section.runaround',
   'section.lock',
   'section.hide',
   'section.duplicate',

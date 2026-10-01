@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import OpenPagesRenderer from '../src/components/OpenPagesRenderer.vue'
 import { createDocument } from '../src/model/document'
 import {
+  addPanelSection,
   addTextSection,
   deleteSection,
   duplicateSection,
@@ -178,11 +179,89 @@ describe('B1 section CRUD + geometry', () => {
       },
     })
 
-    const handle = wrapper.get(`[data-op-resize="${section.id}"]`)
+    const handle = wrapper.get(`[data-op-resize="${section.id}"][data-op-resize-handle="se"]`)
     await handle.trigger('pointerdown', { clientX: 110, clientY: 90, button: 0 })
     await handle.trigger('pointermove', { clientX: 130, clientY: 120 })
     await handle.trigger('pointerup', { clientX: 130, clientY: 120 })
 
     expect(section).toMatchObject({ width: 120, height: 110 })
+  })
+
+  it('exposes resize handles on all corners and edges', async () => {
+    const doc = createDocument({ title: 'Handles' })
+    const page = firstPage(doc)
+    const section = addTextSection(page, {
+      x: 40,
+      y: 50,
+      width: 100,
+      height: 80,
+      content: 'Box',
+    })
+
+    const wrapper = mount(OpenPagesRenderer, {
+      props: {
+        document: doc,
+        pageId: page.id,
+        selectedSectionId: section.id,
+      },
+    })
+
+    const handles = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'] as const
+    for (const handle of handles) {
+      expect(
+        wrapper
+          .find(`[data-op-resize="${section.id}"][data-op-resize-handle="${handle}"]`)
+          .exists(),
+      ).toBe(true)
+    }
+
+    const west = wrapper.get(`[data-op-resize="${section.id}"][data-op-resize-handle="w"]`)
+    await west.trigger('pointerdown', { clientX: 40, clientY: 90, button: 0 })
+    await west.trigger('pointermove', { clientX: 20, clientY: 90 })
+    await west.trigger('pointerup', { clientX: 20, clientY: 90 })
+    expect(section).toMatchObject({ x: 20, y: 50, width: 120, height: 80 })
+
+    const north = wrapper.get(`[data-op-resize="${section.id}"][data-op-resize-handle="n"]`)
+    await north.trigger('pointerdown', { clientX: 80, clientY: 50, button: 0 })
+    await north.trigger('pointermove', { clientX: 80, clientY: 30 })
+    await north.trigger('pointerup', { clientX: 80, clientY: 30 })
+    expect(section).toMatchObject({ x: 20, y: 30, width: 120, height: 100 })
+  })
+
+  it('shows alignment guides while resizing a panel toward another section', async () => {
+    const doc = createDocument({ title: 'Resize snap' })
+    const page = firstPage(doc)
+    const panel = addPanelSection(page, {
+      x: 10,
+      y: 40,
+      width: 100,
+      height: 40,
+      borderStyle: 'ink',
+    })
+    addTextSection(page, {
+      x: 200,
+      y: 40,
+      width: 50,
+      height: 40,
+      content: 'edge',
+    })
+
+    const wrapper = mount(OpenPagesRenderer, {
+      props: {
+        document: doc,
+        pageId: page.id,
+        selectedSectionId: panel.id,
+      },
+    })
+
+    const handle = wrapper.get(`[data-op-resize="${panel.id}"][data-op-resize-handle="se"]`)
+    await handle.trigger('pointerdown', { clientX: 110, clientY: 80, button: 0 })
+    await handle.trigger('pointermove', { clientX: 196, clientY: 80, button: 0 })
+
+    expect(panel.width).toBe(190)
+    expect(wrapper.find('[data-op-snap-guide][data-orientation="vertical"]').exists()).toBe(true)
+
+    await handle.trigger('pointerup', { clientX: 196, clientY: 80, button: 0 })
+    expect(wrapper.find('[data-op-snap-guide]').exists()).toBe(false)
   })
 })

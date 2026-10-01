@@ -30,6 +30,7 @@ function textStub(id: string): Section {
     content: 'hi',
     locked: false,
     hidden: false,
+    runaround: false,
     groupId: null,
     backgroundColor: 'transparent',
     color: '#1a1a1a',
@@ -44,6 +45,8 @@ function textStub(id: string): Section {
     columnCount: 1,
     lineHeight: 1.4,
     textFit: 'none',
+    textAlign: 'left',
+    verticalAlign: 'top',
   }
 }
 
@@ -129,6 +132,7 @@ describe('page setup + add + style tools', () => {
       borderStyle: 'ink',
       locked: false,
       hidden: false,
+      runaround: false,
       groupId: null,
       backgroundColor: 'transparent',
       color: '#1a1a1a',

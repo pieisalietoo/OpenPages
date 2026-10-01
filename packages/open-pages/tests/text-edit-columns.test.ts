@@ -118,4 +118,47 @@ describe('text editing, variants, columns, transparent bg', () => {
     await wrapper.get('[data-op-text-fit]').trigger('change')
     expect(s.textFit).toBe('fill')
   })
+
+  it('columns popover sets horizontal and vertical alignment, including stretch', async () => {
+    const doc = createDocument({ title: 'Align' })
+    const page = firstPage(doc)
+    const section = addTextSection(page, {
+      x: 20,
+      y: 20,
+      width: 220,
+      height: 160,
+      content: 'Align me please across the frame.',
+    })
+    expect(section.textAlign).toBe('left')
+    expect(section.verticalAlign).toBe('top')
+
+    const wrapper = mount(OpenPagesEditor, { props: { modelValue: doc } })
+    await wrapper.get(`[data-op-section="${section.id}"]`).trigger('pointerdown', { button: 0 })
+    await wrapper.get('[data-op-tool="section.columns"]').trigger('click')
+
+    await wrapper.get('[data-op-align-h="center"]').trigger('click')
+    expect(section.textAlign).toBe('center')
+    await wrapper.get('[data-op-align-h="stretch"]').trigger('click')
+    expect(section.textAlign).toBe('stretch')
+    await wrapper.get('[data-op-align-v="middle"]').trigger('click')
+    expect(section.verticalAlign).toBe('middle')
+    await wrapper.get('[data-op-align-v="bottom"]').trigger('click')
+    expect(section.verticalAlign).toBe('bottom')
+    wrapper.unmount()
+
+    const renderer = mount(OpenPagesRenderer, {
+      props: { document: doc, pageId: page.id, selectedSectionIds: [section.id] },
+    })
+    const line = renderer.get('[data-op-line]')
+    const style = line.attributes('style') ?? ''
+    expect(style).toMatch(/text-align:\s*justify/)
+    // Single layout lines are one CSS line each; justify alone leaves them flush-left.
+    expect(style).toMatch(/text-align-last:\s*justify/)
+    expect(style).toMatch(/white-space:\s*normal/)
+    const width = Number(/width:\s*([\d.]+)px/.exec(style)?.[1] ?? NaN)
+    expect(width).toBeGreaterThanOrEqual(section.width - 1)
+    const top = Number(/top:\s*([\d.]+)px/.exec(style)?.[1] ?? NaN)
+    expect(top).toBeGreaterThan(0)
+    renderer.unmount()
+  })
 })

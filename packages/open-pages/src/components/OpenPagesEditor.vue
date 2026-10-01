@@ -1,6 +1,13 @@
 ﻿<script setup lang="ts">
-import { Trash2 } from 'lucide-vue-next'
-import { computed, onBeforeUnmount, onMounted, provide, reactive, ref, watch } from 'vue'
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  Plus,
+  Trash2,
+} from 'lucide-vue-next'
+import { computed, nextTick, onBeforeUnmount, onMounted, provide, reactive, ref, watch } from 'vue'
 import {
   createBrowserExportAdapters,
   createExporter,
@@ -24,6 +31,7 @@ import {
 import { createHistory } from '../model/history'
 import { createLayoutLibrary, type LayoutLibrary, type NamedLayout } from '../model/layouts'
 import { applyPagePreset, setPageMargins } from '../model/page'
+import { addBlankPage, deletePage, duplicatePage, movePage } from '../model/pages'
 import {
   addHeadlineSection,
   addImageSection,
@@ -41,9 +49,12 @@ import {
   sendToBack,
   setSectionHidden,
   setSectionLocked,
+  setSectionRunaround,
+  type TextAlign,
   ungroupSections,
   updateSectionStyle,
   updateTextStyle,
+  type VerticalAlign,
 } from '../model/section'
 import {
   clearSelection,
@@ -352,20 +363,106 @@ const activeToolIds = computed(() => {
   if (selectedSections.value.length > 0 && selectedSections.value.every((s) => s.hidden)) {
     ids.push('section.hide')
   }
+  if (
+    selectedSections.value.length > 0 &&
+    selectedSections.value.every((s) => s.type !== 'runaround' && s.runaround)
+  ) {
+    ids.push('section.runaround')
+  }
   return ids
 })
 
-const pageId = computed(() => {
-  const page = props.modelValue.pages[0]
-  if (!page) throw new Error('expected a page')
-  return page.id
+const pageIndex = ref(0)
+const editingPageNumber = ref(false)
+const pageNumberDraft = ref('')
+const pageJumpInput = ref<HTMLInputElement | null>(null)
+const addMenuOpen = ref(false)
+
+const pageCount = computed(() => props.modelValue.pages.length)
+
+watch(
+  () => props.modelValue.pages.length,
+  (length) => {
+    if (pageIndex.value >= length) {
+      pageIndex.value = Math.max(0, length - 1)
+    }
+  },
+)
+
+watch(editingPageNumber, (editing) => {
+  if (!editing) return
+  void nextTick(() => {
+    pageJumpInput.value?.focus()
+    pageJumpInput.value?.select()
+  })
 })
 
 const currentPage = computed(() => {
-  const page = props.modelValue.pages[0]
+  const page = props.modelValue.pages[pageIndex.value] ?? props.modelValue.pages[0]
   if (!page) throw new Error('expected a page')
   return page
 })
+
+const pageId = computed(() => currentPage.value.id)
+
+function goToPage(index: number) {
+  const total = props.modelValue.pages.length
+  if (total === 0) return
+  const next = Math.min(total - 1, Math.max(0, index))
+  if (next === pageIndex.value) return
+  pageIndex.value = next
+  editingPageNumber.value = false
+  addMenuOpen.value = false
+  clearSelection(selection)
+  emitSelection()
+}
+
+function beginPageJump() {
+  pageNumberDraft.value = String(pageIndex.value + 1)
+  editingPageNumber.value = true
+  addMenuOpen.value = false
+}
+
+function commitPageJump() {
+  if (!editingPageNumber.value) return
+  const parsed = Number.parseInt(pageNumberDraft.value, 10)
+  editingPageNumber.value = false
+  if (!Number.isFinite(parsed)) return
+  goToPage(parsed - 1)
+}
+
+function addPage(mode: 'blank' | 'copy') {
+  const index = pageIndex.value
+  const created =
+    mode === 'blank'
+      ? addBlankPage(props.modelValue, index)
+      : duplicatePage(props.modelValue, index)
+  addMenuOpen.value = false
+  if (!created) return
+  const next = props.modelValue.pages.indexOf(created)
+  pageIndex.value = next >= 0 ? next : index
+  clearSelection(selection)
+  emitSelection()
+  bumpDocument()
+}
+
+function removeCurrentPage() {
+  if (props.modelValue.pages.length <= 1) return
+  const index = pageIndex.value
+  if (!deletePage(props.modelValue, index)) return
+  pageIndex.value = Math.min(index, props.modelValue.pages.length - 1)
+  clearSelection(selection)
+  emitSelection()
+  bumpDocument()
+}
+
+function moveCurrentPage(direction: -1 | 1) {
+  const from = pageIndex.value
+  const to = from + direction
+  if (!movePage(props.modelValue, from, to)) return
+  pageIndex.value = to
+  bumpDocument()
+}
 
 function emitSelection() {
   emit('selectionChange', [...selection.selectedSectionIds])
@@ -428,6 +525,10 @@ function downloadText(text: string, filename: string) {
 }
 
 async function runExport(format: ExportFormat) {
+  if (format === 'png' && props.modelValue.pages.length > 1) {
+    await exportAllPagesPng()
+    return
+  }
   const element = pageEl.value?.querySelector('[data-op-page]') as HTMLElement | null
   element?.classList.add('op-exporting')
   try {
@@ -444,6 +545,30 @@ async function runExport(format: ExportFormat) {
     }
   } finally {
     element?.classList.remove('op-exporting')
+  }
+}
+
+async function exportAllPagesPng() {
+  const start = pageIndex.value
+  const total = props.modelValue.pages.length
+  try {
+    for (let i = 0; i < total; i++) {
+      pageIndex.value = i
+      await nextTick()
+      const element = pageEl.value?.querySelector('[data-op-page]') as HTMLElement | null
+      element?.classList.add('op-exporting')
+      try {
+        const result = await exporter.export('png', { element: element ?? undefined })
+        if (typeof result === 'string') {
+          downloadDataUrl(result, `openpages-page-${i + 1}.png`)
+        }
+      } finally {
+        element?.classList.remove('op-exporting')
+      }
+    }
+  } finally {
+    pageIndex.value = start
+    await nextTick()
   }
 }
 
@@ -515,6 +640,13 @@ function activateTool(id: ToolId, payload?: unknown) {
       const allHidden = selectedSections.value.every((s) => s.hidden)
       for (const sectionId of ids) {
         setSectionHidden(page, sectionId, !allHidden)
+      }
+      break
+    }
+    case 'section.runaround': {
+      const allOn = selectedSections.value.every((s) => s.type !== 'runaround' && s.runaround)
+      for (const sectionId of ids) {
+        setSectionRunaround(page, sectionId, !allOn)
       }
       break
     }
@@ -720,6 +852,8 @@ function patchSelectedTextStyle(patch: {
   columnCount?: number
   lineHeight?: number
   textFit?: 'none' | 'fill'
+  textAlign?: TextAlign
+  verticalAlign?: VerticalAlign
 }) {
   for (const id of selection.selectedSectionIds) {
     updateTextStyle(currentPage.value, id, patch)
@@ -870,6 +1004,15 @@ defineExpose({
             </button>
           </li>
         </ul>
+        <button
+          v-if="pendingDelete?.kind !== 'layout'"
+          type="button"
+          class="op-save-btn op-layout-export"
+          data-op-layout-export
+          @click="exportLayoutJson('download')"
+        >
+          {{ i18n.t('editor.exportJson') }}
+        </button>
       </template>
       <template #popover-layout-save>
         <p class="op-popover-title">{{ i18n.t('editor.saveLayout') }}</p>
@@ -1351,11 +1494,135 @@ defineExpose({
                   />
                   {{ i18n.t('editor.fitText') }}
                 </label>
+                <div class="op-field">
+                  {{ i18n.t('editor.alignHorizontal') }}
+                  <div class="op-align-row">
+                    <button
+                      v-for="align in (['left', 'center', 'right', 'stretch'] as const)"
+                      :key="align"
+                      type="button"
+                      class="op-save-btn"
+                      :class="{ 'is-active': primarySelected.textAlign === align }"
+                      :data-op-align-h="align"
+                      @click="patchSelectedTextStyle({ textAlign: align })"
+                    >
+                      {{ i18n.t(`editor.align.${align}`) }}
+                    </button>
+                  </div>
+                </div>
+                <div class="op-field">
+                  {{ i18n.t('editor.alignVertical') }}
+                  <div class="op-align-row">
+                    <button
+                      v-for="align in (['top', 'middle', 'bottom'] as const)"
+                      :key="align"
+                      type="button"
+                      class="op-save-btn"
+                      :class="{ 'is-active': primarySelected.verticalAlign === align }"
+                      :data-op-align-v="align"
+                      @click="patchSelectedTextStyle({ verticalAlign: align })"
+                    >
+                      {{ i18n.t(`editor.align.${align}`) }}
+                    </button>
+                  </div>
+                </div>
               </div>
             </template>
           </OpenPagesToolbar>
         </template>
       </OpenPagesRenderer>
     </div>
+
+    <nav class="op-page-nav" data-op-page-nav :aria-label="i18n.t('editor.pages')">
+      <button
+        type="button"
+        data-op-page-prev
+        :aria-label="i18n.t('editor.previousPage')"
+        :disabled="pageIndex === 0"
+        @click="goToPage(pageIndex - 1)"
+      >
+        <ChevronLeft class="op-page-icon" aria-hidden="true" />
+      </button>
+      <button
+        v-if="!editingPageNumber"
+        type="button"
+        class="op-page-num"
+        data-op-page-current
+        :aria-label="i18n.t('editor.pageNumber')"
+        @click="beginPageJump"
+      >
+        {{ pageIndex + 1 }}
+      </button>
+      <input
+        v-else
+        ref="pageJumpInput"
+        class="op-page-jump"
+        data-op-page-jump
+        type="text"
+        inputmode="numeric"
+        :aria-label="i18n.t('editor.pageNumber')"
+        :value="pageNumberDraft"
+        @input="pageNumberDraft = ($event.target as HTMLInputElement).value"
+        @keydown.enter.prevent="commitPageJump"
+        @blur="commitPageJump"
+      />
+      <span class="op-page-sep" aria-hidden="true">/</span>
+      <span data-op-page-total>{{ pageCount }}</span>
+      <button
+        type="button"
+        data-op-page-next
+        :aria-label="i18n.t('editor.nextPage')"
+        :disabled="pageIndex >= pageCount - 1"
+        @click="goToPage(pageIndex + 1)"
+      >
+        <ChevronRight class="op-page-icon" aria-hidden="true" />
+      </button>
+      <div class="op-page-add">
+        <button
+          type="button"
+          data-op-page-add
+          :aria-label="i18n.t('editor.addPage')"
+          :aria-expanded="addMenuOpen"
+          @click="addMenuOpen = !addMenuOpen"
+        >
+          <Plus class="op-page-icon" aria-hidden="true" />
+        </button>
+        <div v-if="addMenuOpen" class="op-page-add-menu" data-op-page-add-menu>
+          <button type="button" data-op-page-add-copy @click="addPage('copy')">
+            {{ i18n.t('editor.copyCurrentPage') }}
+          </button>
+          <button type="button" data-op-page-add-blank @click="addPage('blank')">
+            {{ i18n.t('editor.blankPage') }}
+          </button>
+        </div>
+      </div>
+      <button
+        type="button"
+        data-op-page-move-earlier
+        :aria-label="i18n.t('editor.movePageEarlier')"
+        :disabled="pageIndex === 0"
+        @click="moveCurrentPage(-1)"
+      >
+        <ChevronsLeft class="op-page-icon" aria-hidden="true" />
+      </button>
+      <button
+        type="button"
+        data-op-page-move-later
+        :aria-label="i18n.t('editor.movePageLater')"
+        :disabled="pageIndex >= pageCount - 1"
+        @click="moveCurrentPage(1)"
+      >
+        <ChevronsRight class="op-page-icon" aria-hidden="true" />
+      </button>
+      <button
+        type="button"
+        data-op-page-delete
+        :aria-label="i18n.t('editor.deletePage')"
+        :disabled="pageCount <= 1"
+        @click="removeCurrentPage"
+      >
+        <Trash2 class="op-page-icon" aria-hidden="true" />
+      </button>
+    </nav>
   </div>
 </template>

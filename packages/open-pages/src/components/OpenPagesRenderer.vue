@@ -21,7 +21,7 @@ import {
   matchCatalogFont,
   type OpenPagesFont,
 } from '../model/fonts'
-import { relativeExclusionsForHost } from '../model/runaround'
+import { relativeExclusionsForHost, runaroundZonesForHost } from '../model/runaround'
 import { sanitizeTextHtml } from '../model/sanitize-html'
 import {
   bumpTextSectionFonts,
@@ -31,8 +31,16 @@ import {
   nudgeSection,
   resizeSection,
   type Section,
+  type TextAlign,
 } from '../model/section'
-import { type SnapGuide, snapSectionPosition } from '../model/snap'
+import {
+  proposedBoxForResizeHandle,
+  type ResizeHandle,
+  resizeHandleLocks,
+  type SnapGuide,
+  snapSectionBox,
+  snapSectionPosition,
+} from '../model/snap'
 import {
   deletePlainRange,
   insertPlainText,
@@ -101,9 +109,12 @@ const emit = defineEmits<{
 
 type DragMode = 'move' | 'resize'
 
+const RESIZE_HANDLES: ResizeHandle[] = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w']
+
 const drag = ref<{
   mode: DragMode
   sectionId: string
+  handle: ResizeHandle | null
   startX: number
   startY: number
   originX: number
@@ -1413,6 +1424,7 @@ function cancelDrag(): boolean {
   if (state.mode === 'move') {
     moveSection(page.value, state.sectionId, state.originX, state.originY)
   } else {
+    moveSection(page.value, state.sectionId, state.originX, state.originY)
     resizeSection(page.value, state.sectionId, state.originW, state.originH)
   }
   drag.value = null
@@ -1429,7 +1441,12 @@ function onWindowKeydown(event: KeyboardEvent) {
   }
 }
 
-function beginDrag(mode: DragMode, section: Section, event: PointerEvent) {
+function beginDrag(
+  mode: DragMode,
+  section: Section,
+  event: PointerEvent,
+  handle: ResizeHandle | null = null,
+) {
   if (event.button !== 0) {
     return
   }
@@ -1445,6 +1462,7 @@ function beginDrag(mode: DragMode, section: Section, event: PointerEvent) {
   drag.value = {
     mode,
     sectionId: section.id,
+    handle: mode === 'resize' ? (handle ?? 'se') : null,
     startX: event.clientX,
     startY: event.clientY,
     originX: section.x,
@@ -1466,36 +1484,51 @@ function onPointerMove(event: PointerEvent) {
   if (dx !== 0 || dy !== 0) {
     state.moved = true
   }
+  const others = page.value.sections
+    .filter((entry) => entry.id !== state.sectionId && !entry.hidden)
+    .map((entry) => ({
+      id: entry.id,
+      x: entry.x,
+      y: entry.y,
+      width: entry.width,
+      height: entry.height,
+    }))
+  const snapPage = {
+    width: page.value.width,
+    height: page.value.height,
+    margins: page.value.margins,
+  }
+  const snapOptions = { enabled: props.snapEnabled, shiftKey: event.shiftKey }
   if (state.mode === 'move') {
     const section = page.value.sections.find((entry) => entry.id === state.sectionId)
     if (!section) return
-    const proposedX = state.originX + dx
-    const proposedY = state.originY + dy
-    const others = page.value.sections
-      .filter((entry) => entry.id !== state.sectionId && !entry.hidden)
-      .map((entry) => ({
-        id: entry.id,
-        x: entry.x,
-        y: entry.y,
-        width: entry.width,
-        height: entry.height,
-      }))
     const snapped = snapSectionPosition(
       { x: section.x, y: section.y, width: section.width, height: section.height },
-      { x: proposedX, y: proposedY },
+      { x: state.originX + dx, y: state.originY + dy },
       others,
-      {
-        width: page.value.width,
-        height: page.value.height,
-        margins: page.value.margins,
-      },
-      { enabled: props.snapEnabled, shiftKey: event.shiftKey },
+      snapPage,
+      snapOptions,
     )
     moveSection(page.value, state.sectionId, snapped.x, snapped.y)
     snapGuides.value = snapped.guides
   } else {
-    resizeSection(page.value, state.sectionId, state.originW + dx, state.originH + dy)
-    snapGuides.value = []
+    const handle = state.handle ?? 'se'
+    const proposed = proposedBoxForResizeHandle(
+      { x: state.originX, y: state.originY, width: state.originW, height: state.originH },
+      dx,
+      dy,
+      handle,
+    )
+    const snapped = snapSectionBox(
+      proposed,
+      resizeHandleLocks(handle),
+      others,
+      snapPage,
+      snapOptions,
+    )
+    moveSection(page.value, state.sectionId, snapped.x, snapped.y)
+    resizeSection(page.value, state.sectionId, snapped.width, snapped.height)
+    snapGuides.value = snapped.guides
   }
   emit('change', { transient: true })
 }
@@ -1520,17 +1553,7 @@ function layoutLines(section: Section): { lines: LaidOutLine[]; fontSize: number
   }
   const exclusions = relativeExclusionsForHost(
     { x: section.x, y: section.y, width: section.width, height: section.height },
-    page.value.sections
-      .filter((s): s is Extract<Section, { type: 'runaround' }> => s.type === 'runaround')
-      .map((s) => ({
-        id: s.id,
-        x: s.x,
-        y: s.y,
-        width: s.width,
-        height: s.height,
-        wrapOffset: s.wrapOffset,
-        hidden: s.hidden,
-      })),
+    runaroundZonesForHost(page.value.sections, section.id),
   ).map((ex) => ({ x: ex.x, y: ex.y, width: ex.width, height: ex.height }))
 
   const html = textOf(section)
@@ -1563,6 +1586,31 @@ const lineLayouts = computed(() => {
   return map
 })
 
+function cssTextAlign(align: TextAlign | undefined): 'left' | 'center' | 'right' | 'justify' {
+  if (align === 'center') return 'center'
+  if (align === 'right') return 'right'
+  if (align === 'stretch') return 'justify'
+  return 'left'
+}
+
+function verticalAlignOffset(
+  section: Extract<Section, { type: 'text' | 'headline' }>,
+  lines: LaidOutLine[],
+): number {
+  if (section.verticalAlign === 'top' || lines.length === 0) return 0
+  let top = Number.POSITIVE_INFINITY
+  let bottom = Number.NEGATIVE_INFINITY
+  for (const line of lines) {
+    top = Math.min(top, line.y)
+    bottom = Math.max(bottom, line.y + line.height)
+  }
+  const spare = section.height - (bottom - top)
+  if (spare <= 0) return 0
+  if (section.verticalAlign === 'middle') return spare / 2
+  if (section.verticalAlign === 'bottom') return spare
+  return 0
+}
+
 function lineBoxStyle(section: Section, line: LaidOutLine, fontSize: number) {
   const scale = line.fontScale ?? 1
   const bold =
@@ -1576,9 +1624,17 @@ function lineBoxStyle(section: Section, line: LaidOutLine, fontSize: number) {
     if (section.fontUnderline) decorations.push('underline')
     if (section.fontStrike) decorations.push('line-through')
   }
+  const lines =
+    section.type === 'text' || section.type === 'headline'
+      ? (lineLayouts.value.get(section.id)?.lines ?? [])
+      : []
+  const vOffset =
+    section.type === 'text' || section.type === 'headline' ? verticalAlignOffset(section, lines) : 0
+  const stretch =
+    (section.type === 'text' || section.type === 'headline') && section.textAlign === 'stretch'
   return {
     left: `${line.x}px`,
-    top: `${line.y}px`,
+    top: `${line.y + vOffset}px`,
     width: `${line.width}px`,
     height: `${line.height}px`,
     fontSize: `${fontSize * scale}px`,
@@ -1588,6 +1644,13 @@ function lineBoxStyle(section: Section, line: LaidOutLine, fontSize: number) {
     fontWeight: bold ? '700' : '400',
     fontStyle: italic ? 'italic' : 'normal',
     textDecoration: decorations.length ? decorations.join(' ') : 'none',
+    textAlign:
+      section.type === 'text' || section.type === 'headline'
+        ? cssTextAlign(section.textAlign)
+        : undefined,
+    textAlignLast: stretch ? ('justify' as const) : undefined,
+    // `.op-line` uses white-space:pre which blocks justification; override for stretch.
+    whiteSpace: stretch ? ('normal' as const) : undefined,
     paddingLeft: line.listMarker ? '1.35em' : undefined,
   }
 }
@@ -1767,14 +1830,19 @@ function imageAlt(section: Section): string {
           :data-border-style="section.borderStyle"
         />
         <div v-else-if="section.type === 'runaround'" class="op-section-runaround" />
-        <button
-          v-if="showResize(section) && !isEditing(section)"
-          type="button"
-          class="op-resize-handle"
-          :data-op-resize="section.id"
-          :aria-label="i18n.t('chrome.resizeSection')"
-          @pointerdown.stop="beginDrag('resize', section, $event)"
-        />
+        <template v-if="showResize(section) && !isEditing(section)">
+          <button
+            v-for="handle in RESIZE_HANDLES"
+            :key="handle"
+            type="button"
+            class="op-resize-handle"
+            :class="`op-resize-handle--${handle}`"
+            :data-op-resize="section.id"
+            :data-op-resize-handle="handle"
+            :aria-label="i18n.t('chrome.resizeSection')"
+            @pointerdown.stop="beginDrag('resize', section, $event, handle)"
+          />
+        </template>
       </div>
       <div
         v-if="showSelectionChrome"

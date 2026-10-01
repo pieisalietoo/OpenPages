@@ -28,9 +28,38 @@ import {
   Type,
   Ungroup,
 } from 'lucide-vue-next'
-import { computed, ref, watch } from 'vue'
+import { computed, defineComponent, h, ref, watch } from 'vue'
 import type { ToolbarEntry } from '../tooling/toolbar-order'
 import type { ToolDefinition, ToolId, ToolScope } from '../tooling/tools'
+
+/** TextInitial-like glyph with a filled square instead of a letter. */
+const TextSquare = defineComponent({
+  name: 'TextSquare',
+  setup() {
+    return () =>
+      h(
+        'svg',
+        {
+          xmlns: 'http://www.w3.org/2000/svg',
+          width: '24',
+          height: '24',
+          viewBox: '0 0 24 24',
+          fill: 'none',
+          stroke: 'currentColor',
+          'stroke-width': '2',
+          'stroke-linecap': 'round',
+          'stroke-linejoin': 'round',
+          class: 'lucide op-tool-icon',
+          'aria-hidden': 'true',
+        },
+        [
+          h('path', { d: 'M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z' }),
+          h('path', { d: 'M14 2v4a2 2 0 0 0 2 2h4' }),
+          h('rect', { x: '8', y: '12', width: '8', height: '6', rx: '0.5' }),
+        ],
+      )
+  },
+})
 
 const props = defineProps<{
   scope: ToolScope
@@ -44,7 +73,7 @@ const emit = defineEmits<{
   togglePopover: [id: ToolId]
 }>()
 
-const iconMap: Record<string, LucideIcon> = {
+const iconMap: Record<string, LucideIcon | typeof TextSquare> = {
   'layout-template': LayoutTemplate,
   save: Save,
   'book-type': BookType,
@@ -58,6 +87,7 @@ const iconMap: Record<string, LucideIcon> = {
   palette: Palette,
   type: Type,
   'columns-2': Columns2,
+  'text-square': TextSquare,
   lock: Lock,
   'lock-open': LockOpen,
   'eye-off': EyeOff,
@@ -72,7 +102,7 @@ const iconMap: Record<string, LucideIcon> = {
   ungroup: Ungroup,
 }
 
-function iconFor(tool: ToolDefinition): LucideIcon {
+function iconFor(tool: ToolDefinition) {
   return iconMap[tool.icon] ?? LayoutTemplate
 }
 
@@ -99,6 +129,13 @@ const popoverTools = new Set<ToolId>([
   'section.columns',
 ])
 
+const toggleTools = new Set<ToolId>([
+  'view.magnet',
+  'section.lock',
+  'section.hide',
+  'section.runaround',
+])
+
 function onClick(tool: ToolDefinition) {
   if (popoverTools.has(tool.id)) {
     emit('togglePopover', tool.id)
@@ -113,6 +150,10 @@ function popoverSlotName(id: ToolId): string {
 
 function isActive(id: ToolId): boolean {
   return (props.activeIds ?? []).includes(id)
+}
+
+function isToggle(id: ToolId): boolean {
+  return toggleTools.has(id)
 }
 </script>
 
@@ -141,13 +182,7 @@ function isActive(id: ToolId): boolean {
           :title="entry.tool.label"
           :aria-label="entry.tool.label"
           :aria-pressed="
-            entry.tool.id === 'view.magnet' ||
-            entry.tool.id === 'section.lock' ||
-            entry.tool.id === 'section.hide'
-              ? isActive(entry.tool.id)
-                ? 'true'
-                : 'false'
-              : undefined
+            isToggle(entry.tool.id) ? (isActive(entry.tool.id) ? 'true' : 'false') : undefined
           "
           :aria-expanded="openId === entry.tool.id ? 'true' : undefined"
           @click="onClick(entry.tool)"

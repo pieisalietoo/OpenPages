@@ -3,6 +3,7 @@ import type { ToolDefinition, ToolId } from './tools'
 
 const MULTI_SHARED: ToolId[] = [
   'section.style',
+  'section.runaround',
   'section.lock',
   'section.hide',
   'section.delete',
@@ -19,26 +20,40 @@ const TYPE_TOOLS: Partial<Record<SectionType, ToolId[]>> = {
   text: [
     'section.font',
     'section.columns',
+    'section.runaround',
     ...SINGLE_ONLY,
-    ...MULTI_SHARED.filter((id) => id !== 'section.group' && id !== 'section.style'),
+    ...MULTI_SHARED.filter(
+      (id) => id !== 'section.group' && id !== 'section.style' && id !== 'section.runaround',
+    ),
   ],
   headline: [
     'section.font',
     'section.columns',
+    'section.runaround',
     ...SINGLE_ONLY,
-    ...MULTI_SHARED.filter((id) => id !== 'section.group' && id !== 'section.style'),
+    ...MULTI_SHARED.filter(
+      (id) => id !== 'section.group' && id !== 'section.style' && id !== 'section.runaround',
+    ),
   ],
   image: [
+    'section.runaround',
     ...SINGLE_ONLY,
-    ...MULTI_SHARED.filter((id) => id !== 'section.group' && id !== 'section.style'),
+    ...MULTI_SHARED.filter(
+      (id) => id !== 'section.group' && id !== 'section.style' && id !== 'section.runaround',
+    ),
   ],
   panel: [
+    'section.runaround',
     ...SINGLE_ONLY,
-    ...MULTI_SHARED.filter((id) => id !== 'section.group' && id !== 'section.style'),
+    ...MULTI_SHARED.filter(
+      (id) => id !== 'section.group' && id !== 'section.style' && id !== 'section.runaround',
+    ),
   ],
   runaround: [
     ...SINGLE_ONLY,
-    ...MULTI_SHARED.filter((id) => id !== 'section.group' && id !== 'section.style'),
+    ...MULTI_SHARED.filter(
+      (id) => id !== 'section.group' && id !== 'section.style' && id !== 'section.runaround',
+    ),
   ],
 }
 
