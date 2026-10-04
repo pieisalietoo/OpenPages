@@ -1,5 +1,6 @@
 export { default as OpenPagesEditor } from './components/OpenPagesEditor.vue'
 export { default as OpenPagesRenderer } from './components/OpenPagesRenderer.vue'
+export type { ToolbarIconMap } from './components/OpenPagesToolbar.vue'
 export { default as OpenPagesToolbar } from './components/OpenPagesToolbar.vue'
 export type {
   ExportAdapters,
@@ -21,6 +22,7 @@ export type {
   AddImageSectionInput,
   AddPanelSectionInput,
   AddRunaroundSectionInput,
+  AddSectionOptions,
   AddTextSectionInput,
   Asset,
   CreateDocumentOptions,
@@ -43,6 +45,7 @@ export type {
   OpenPagesDocument,
   OpenPagesFont,
   Page,
+  PageLike,
   PageMargins,
   PageOrientation,
   PagePresetId,
@@ -75,6 +78,7 @@ export {
   addImageSection,
   addPanelSection,
   addRunaroundSection,
+  addSectionToPage,
   addTextSection,
   applyCatalogFontSelection,
   applyPagePreset,
@@ -154,6 +158,7 @@ export {
 export type {
   BuiltinToolId,
   CreateToolControllerOptions,
+  ExtraDocumentTool,
   ToolActivateEvent,
   ToolbarChromeId,
   ToolbarEntry,
@@ -171,6 +176,7 @@ export {
   DEFAULT_DOCUMENT_TOOLBAR,
   DEFAULT_SELECTION_TOOLBAR,
   isToolbarChromeId,
+  mergeDocumentToolbarOrder,
   resolveToolbarEntries,
   visibleSelectionTools,
 } from './tooling'

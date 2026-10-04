@@ -8,7 +8,7 @@ Embeddable Vue 3 layout engine for comics, newspapers, magazines, and similar pr
 
 - [Node.js](https://nodejs.org/) 20+
 - [pnpm](https://pnpm.io/) 9+ (the repo pins `pnpm@12` via `packageManager`)
-- A Vue 3 host app (peer dependency: `vue ^3.5`)
+- A Vue 3 host app (peer dependencies: `vue ^3.5`, `@lucide/vue ^1.52`)
 
 ## Usage
 
@@ -17,8 +17,8 @@ Embeddable Vue 3 layout engine for comics, newspapers, magazines, and similar pr
 When consuming a published release:
 
 ```bash
-pnpm add @openpages/vue
-# or: npm install @openpages/vue
+pnpm add @openpages/vue @lucide/vue vue
+# or: npm install @openpages/vue @lucide/vue vue
 ```
 
 Until a release is published, depend on a git checkout or a local path (see [Link a host app to local sources](#link-a-host-app-to-local-sources)).
@@ -27,14 +27,7 @@ Published installs resolve the compiled `dist/` build (`open-pages.js`, `open-pa
 
 ### Minimal editor
 
-Import the package stylesheet once in your app (it pulls in Tailwind utilities used by the chrome):
-
-```ts
-// main.ts / style entry
-import '@openpages/vue/style.css'
-```
-
-Then mount the editor:
+Styles are injected into a Shadow DOM by the package — **do not** import `@openpages/vue/style.css` in the host (that would leak package CSS into the page).
 
 ```vue
 <script setup lang="ts">
@@ -49,7 +42,7 @@ const doc = ref<OpenPagesDocument>(createDocument({ title: 'Untitled' }))
 </template>
 ```
 
-Your Vite (or equivalent) config must compile Vue SFCs from the package. A typical Vite host already has `@vitejs/plugin-vue`. If you import `@openpages/vue/style.css`, also enable Tailwind v4 in the host (for example `@tailwindcss/vite`), matching the demo app.
+Your Vite (or equivalent) config must compile Vue SFCs from the package. A typical Vite host already has `@vitejs/plugin-vue`.
 
 ### Host-controlled chrome
 
@@ -153,8 +146,7 @@ export default defineConfig({
   plugins: [vue()],
   resolve: {
     alias: {
-      // Point at the package `src/` directory (not `index.ts`), so
-      // `@openpages/vue/style.css` resolves correctly under Vite/Tailwind.
+      // Point at the package `src/` directory (not `index.ts`).
       '@openpages/vue': path.join(openPagesRoot, 'src'),
     },
     // Critical: one Vue copy shared by host + OpenPages
@@ -171,11 +163,11 @@ export default defineConfig({
 })
 ```
 
-#### Vue / Tailwind checklist for linked hosts
+#### Vue checklist for linked hosts
 
 1. **Single Vue instance** — use `resolve.dedupe: ['vue']` (and avoid nested `node_modules/vue` inside the linked package when possible). Duplicate Vue causes “invalid vnode” / broken reactivity.
 2. **Compile SFCs** — host must run `@vitejs/plugin-vue` so `.vue` files under OpenPages compile.
-3. **Styles** — import `@openpages/vue/style.css` and enable Tailwind v4 in the host (see `apps/demo`).
+3. **Styles** — no host stylesheet import: OpenPages injects CSS into its Shadow DOM.
 4. **Two terminals** — run the host `dev` server and edit OpenPages sources; no `pnpm build` / version bump of `@openpages/vue` is required for this workflow.
 
 When you are ready to ship the host against a fixed OpenPages revision, switch the dependency back to a published version, a git tag, or a path commit — and remove the alias / `link:` override.

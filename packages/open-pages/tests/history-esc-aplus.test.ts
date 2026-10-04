@@ -5,6 +5,7 @@ import OpenPagesEditor from '../src/components/OpenPagesEditor.vue'
 import OpenPagesRenderer from '../src/components/OpenPagesRenderer.vue'
 import { createDocument } from '../src/model/document'
 import { createHistory } from '../src/model/history'
+import { createLayoutLibrary } from '../src/model/layouts'
 import { addTextSection } from '../src/model/section'
 
 function firstPage(doc: ReturnType<typeof createDocument>) {
@@ -153,6 +154,92 @@ describe('document history', () => {
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'y', ctrlKey: true, bubbles: true }))
     await nextTick()
     expect(wrapper.props('modelValue').pages[0]?.sections[0]?.x).toBe(11)
+    wrapper.unmount()
+  })
+
+  it('resets the stack so undo cannot leave the new present', () => {
+    const history = createHistory({ limit: 10 })
+    history.push('a')
+    history.push('b')
+    history.reset('layout-b')
+    expect(history.canUndo()).toBe(false)
+    expect(history.undo()).toBeNull()
+    history.push('layout-b-edit')
+    expect(history.undo()).toBe('layout-b')
+    expect(history.canUndo()).toBe(false)
+  })
+
+  it('Ctrl+Z after layout select + one edit stays on the selected layout', async () => {
+    const blank = createDocument({ title: 'Blank' })
+    addTextSection(firstPage(blank), {
+      x: 5,
+      y: 5,
+      width: 80,
+      height: 30,
+      content: 'Blank text',
+    })
+    const feature = createDocument({ title: 'Feature Lab' })
+    const featureSection = addTextSection(firstPage(feature), {
+      x: 20,
+      y: 20,
+      width: 100,
+      height: 40,
+      content: 'Feature text',
+    })
+    const layouts = createLayoutLibrary({
+      layouts: [
+        { name: 'Blank', document: blank },
+        { name: 'Feature', document: feature },
+      ],
+      activeName: 'Blank',
+    })
+
+    const wrapper = mount(OpenPagesEditor, {
+      props: {
+        modelValue: blank,
+        layoutLibrary: layouts,
+        'onUpdate:modelValue': (value: typeof blank) => {
+          void wrapper.setProps({ modelValue: value })
+        },
+      },
+      attachTo: document.body,
+    })
+    await nextTick()
+
+    await wrapper.get('[data-op-tool="layout.select"]').trigger('click')
+    await wrapper.get('[data-op-layout="Feature"]').trigger('click')
+    await nextTick()
+    expect(wrapper.props('modelValue').meta.title).toBe('Feature Lab')
+    expect(layouts.getActive()?.name).toBe('Feature')
+
+    const sectionId = featureSection.id
+    const xBefore = wrapper
+      .props('modelValue')
+      .pages[0]?.sections.find((s) => s.id === sectionId)?.x
+    expect(xBefore).toBe(20)
+
+    await wrapper.get(`[data-op-section="${sectionId}"]`).trigger('pointerdown', {
+      button: 0,
+      clientX: 20,
+      clientY: 20,
+    })
+    await wrapper.get('[data-op-renderer]').trigger('keydown', {
+      key: 'ArrowRight',
+      ctrlKey: true,
+    })
+    expect(wrapper.props('modelValue').pages[0]?.sections.find((s) => s.id === sectionId)?.x).toBe(
+      21,
+    )
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true }))
+    await nextTick()
+
+    expect(layouts.getActive()?.name).toBe('Feature')
+    expect(wrapper.props('modelValue').meta.title).toBe('Feature Lab')
+    expect(wrapper.props('modelValue').pages[0]?.sections.find((s) => s.id === sectionId)?.x).toBe(
+      20,
+    )
+    expect(wrapper.props('modelValue').meta.title).not.toBe('Blank')
     wrapper.unmount()
   })
 })

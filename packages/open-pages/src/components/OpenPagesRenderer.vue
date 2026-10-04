@@ -9,7 +9,7 @@ import {
   TextInitial,
   Trash2,
   Underline,
-} from 'lucide-vue-next'
+} from '@lucide/vue'
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, useSlots } from 'vue'
 import { createI18n, type OpenPagesI18n } from '../i18n'
 import { OPEN_PAGES_I18N } from '../i18n/keys'
@@ -68,15 +68,18 @@ import {
   createCanvasMeasurer,
   fitTextFrame,
   hitTestClientPoint,
+  horizontalStretchScale,
   htmlToPlainText,
   inlineRunsFromHtml,
   type LaidOutLine,
   lineIndexForOffset,
   lineRangeAtOffset,
+  measurePlainPrefix,
   moveCaretVertically,
   selectionRects,
   snapCaretAfterEdit,
 } from '../model/text-layout'
+import OpShadowRoot from './OpShadowRoot.vue'
 
 const props = withDefaults(
   defineProps<{
@@ -208,6 +211,12 @@ const COLUMN_GAP_PX = 16
 const editingSectionId = ref<string | null>(null)
 /** While editing: live layout WYSIWYG vs raw HTML textarea. */
 const textEditMode = ref<'wysiwyg' | 'source'>('wysiwyg')
+/** Root inside the shadow tree — queries must not use document (host CSS isolation). */
+const rendererRoot = ref<HTMLElement | null>(null)
+
+function queryOp<T extends Element = Element>(selector: string): T | null {
+  return (rendererRoot.value?.querySelector(selector) ?? null) as T | null
+}
 /** Plain-text caret offset (textContent order) while in WYSIWYG mode. */
 const editCaretOffset = ref(0)
 const editAnchorOffset = ref(0)
@@ -355,9 +364,7 @@ function wysiwygHit(
   clientY: number,
 ): { offset: number; affinity: CaretAffinity } | null {
   if (section.type !== 'text' && section.type !== 'headline') return null
-  const sectionEl = document.querySelector(
-    `[data-op-section="${section.id}"]`,
-  ) as HTMLElement | null
+  const sectionEl = queryOp<HTMLElement>(`[data-op-section="${section.id}"]`)
   if (!sectionEl) return null
   const lineEls = Array.from(sectionEl.querySelectorAll('[data-op-line]')) as HTMLElement[]
   if (!lineEls.length) return null
@@ -498,16 +505,14 @@ function clearChromeSelectionMarks(root?: HTMLElement | null) {
 
 function getEditEl(): HTMLElement | null {
   if (!editingSectionId.value || textEditMode.value !== 'wysiwyg') return null
-  return document.querySelector(
-    `[data-op-section="${editingSectionId.value}"] [data-op-text-edit]`,
-  ) as HTMLElement | null
+  return queryOp<HTMLElement>(`[data-op-section="${editingSectionId.value}"] [data-op-text-edit]`)
 }
 
 function getSourceEl(): HTMLTextAreaElement | null {
   if (!editingSectionId.value || textEditMode.value !== 'source') return null
-  return document.querySelector(
+  return queryOp<HTMLTextAreaElement>(
     `[data-op-section="${editingSectionId.value}"] [data-op-text-source]`,
-  ) as HTMLTextAreaElement | null
+  )
 }
 
 onBeforeUnmount(() => {
@@ -912,9 +917,7 @@ function wysiwygCaretStyle(section: Section) {
     fontBold: section.fontBold,
     fontItalic: section.fontItalic,
   }
-  const sectionEl = document.querySelector(
-    `[data-op-section="${section.id}"]`,
-  ) as HTMLElement | null
+  const sectionEl = queryOp<HTMLElement>(`[data-op-section="${section.id}"]`)
   if (sectionEl) {
     const lineEls = Array.from(sectionEl.querySelectorAll('[data-op-line]')) as HTMLElement[]
     const offset = editCaretOffset.value
@@ -1348,6 +1351,7 @@ function sectionClass(section: Section) {
     'is-hovered': props.hoveredSectionId === section.id && !selected,
     'is-snap-target': snapTarget,
     'is-hidden': section.hidden,
+    'is-editing': isEditing(section),
   }
 }
 
@@ -1589,7 +1593,7 @@ const lineLayouts = computed(() => {
 function cssTextAlign(align: TextAlign | undefined): 'left' | 'center' | 'right' | 'justify' {
   if (align === 'center') return 'center'
   if (align === 'right') return 'right'
-  if (align === 'stretch') return 'justify'
+  if (align === 'justify') return 'justify'
   return 'left'
 }
 
@@ -1630,8 +1634,27 @@ function lineBoxStyle(section: Section, line: LaidOutLine, fontSize: number) {
       : []
   const vOffset =
     section.type === 'text' || section.type === 'headline' ? verticalAlignOffset(section, lines) : 0
+  const justify =
+    (section.type === 'text' || section.type === 'headline') && section.textAlign === 'justify'
   const stretch =
     (section.type === 'text' || section.type === 'headline') && section.textAlign === 'stretch'
+  let stretchScale = 1
+  if (stretch && (section.type === 'text' || section.type === 'headline')) {
+    const measureStyle = {
+      fontSize: fontSize * scale,
+      fontFamily: section.fontFamily,
+      fontBold: bold,
+      fontItalic: italic,
+    }
+    const contentWidth = measurePlainPrefix(
+      line.text,
+      line.text.length,
+      textMeasurer,
+      measureStyle,
+      line.runs,
+    )
+    stretchScale = horizontalStretchScale(contentWidth, line.width)
+  }
   return {
     left: `${line.x}px`,
     top: `${line.y + vOffset}px`,
@@ -1648,9 +1671,11 @@ function lineBoxStyle(section: Section, line: LaidOutLine, fontSize: number) {
       section.type === 'text' || section.type === 'headline'
         ? cssTextAlign(section.textAlign)
         : undefined,
-    textAlignLast: stretch ? ('justify' as const) : undefined,
-    // `.op-line` uses white-space:pre which blocks justification; override for stretch.
-    whiteSpace: stretch ? ('normal' as const) : undefined,
+    textAlignLast: justify ? ('justify' as const) : undefined,
+    // `.op-line` uses white-space:pre which blocks justification; override for justify.
+    whiteSpace: justify ? ('normal' as const) : undefined,
+    transform: stretch && stretchScale !== 1 ? `scaleX(${stretchScale})` : undefined,
+    transformOrigin: stretch ? ('left center' as const) : undefined,
     paddingLeft: line.listMarker ? '1.35em' : undefined,
   }
 }
@@ -1696,7 +1721,9 @@ function imageAlt(section: Section): string {
 </script>
 
 <template>
+  <OpShadowRoot>
   <div
+    ref="rendererRoot"
     class="op-renderer"
     data-op-renderer
     tabindex="0"
@@ -2003,4 +2030,5 @@ function imageAlt(section: Section): string {
       </div>
     </div>
   </div>
+  </OpShadowRoot>
 </template>

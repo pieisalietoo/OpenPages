@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { LayoutTemplate } from '@lucide/vue'
 import {
   createCustomFontsDemoDocument,
   createDataBoundDocument,
@@ -16,7 +17,6 @@ import {
   OpenPagesEditor,
   serializeDocument,
 } from '@openpages/vue'
-import { LayoutTemplate } from 'lucide-vue-next'
 import { computed, nextTick, reactive, ref, watch } from 'vue'
 
 type DemoTab = 'layouts' | 'fonts' | 'custom' | 'language'

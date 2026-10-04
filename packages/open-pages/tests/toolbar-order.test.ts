@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_DOCUMENT_TOOLBAR,
   DEFAULT_SELECTION_TOOLBAR,
+  mergeDocumentToolbarOrder,
   resolveToolbarEntries,
 } from '../src/tooling/toolbar-order'
 import { createToolController, type ToolDefinition } from '../src/tooling/tools'
@@ -49,6 +50,56 @@ describe('resolveToolbarEntries', () => {
 
   it('returns null when no configured tool is available', () => {
     expect(resolveToolbarEntries(['fonts.manage', 'sep'], defs('page.setup'))).toBeNull()
+  })
+})
+
+describe('mergeDocumentToolbarOrder', () => {
+  it('auto-inserts extra ids before the last grow when autoInsert is true', () => {
+    expect(
+      mergeDocumentToolbarOrder(DEFAULT_DOCUMENT_TOOLBAR, ['host.stamp', 'host.ai'], {
+        autoInsert: true,
+      }),
+    ).toEqual([
+      'layout.select',
+      'layout.save',
+      'layout.exportJson',
+      'fonts.manage',
+      'sep',
+      'export.print',
+      'export.png',
+      'export.pdf',
+      'sep',
+      'section.add',
+      'view.magnet',
+      'host.stamp',
+      'host.ai',
+      'grow',
+      'page.setup',
+    ])
+  })
+
+  it('appends extras at the end when there is no grow and autoInsert is true', () => {
+    expect(
+      mergeDocumentToolbarOrder(['layout.select', 'section.add'], ['host.extra'], {
+        autoInsert: true,
+      }),
+    ).toEqual(['layout.select', 'section.add', 'host.extra'])
+  })
+
+  it('does not auto-insert when autoInsert is false (host order is authoritative)', () => {
+    expect(
+      mergeDocumentToolbarOrder(['layout.select', 'grow', 'page.setup'], ['host.stamp'], {
+        autoInsert: false,
+      }),
+    ).toEqual(['layout.select', 'grow', 'page.setup'])
+  })
+
+  it('skips extras already present in the order', () => {
+    expect(
+      mergeDocumentToolbarOrder(['host.stamp', 'grow', 'page.setup'], ['host.stamp', 'host.ai'], {
+        autoInsert: true,
+      }),
+    ).toEqual(['host.stamp', 'host.ai', 'grow', 'page.setup'])
   })
 })
 

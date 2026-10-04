@@ -60,6 +60,7 @@ export const it: Record<string, string> = {
   'editor.align.left': 'Sinistra',
   'editor.align.center': 'Centro',
   'editor.align.right': 'Destra',
+  'editor.align.justify': 'Giustifica',
   'editor.align.stretch': 'Stretch',
   'editor.align.top': 'Alto',
   'editor.align.middle': 'Centro',

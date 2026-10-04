@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-10-05
+
+### Added
+
+- Host document toolbar tools via `extraDocumentTools` (id, label, icon, optional action); auto-inserted before the last `grow` unless a custom `documentToolbar` order is provided.
+- Host toolbar icon map via `toolbarIcons` so custom icon keys are not limited to built-ins.
+- Public `addSection` / `addSectionToPage` API to insert typed sections with optional content and geometry.
+- Shadow DOM isolation for editor chrome so host form CSS cannot restyle OpenPages controls (styles injected into the shadow tree).
+
+### Changed
+
+- Split horizontal fill into **justify** (word spacing) and **stretch** (per-line `scaleX`), with matching columns-panel icons.
+- Replace `lucide-vue-next` with peer dependency `@lucide/vue` (^1.52). Hosts must install `@lucide/vue` alongside Vue.
+
+### Fixed
+
+- Restore chrome styles inside Shadow DOM after dropping the host stylesheet import.
+- Reset undo history when switching named layouts so Ctrl+Z undoes edits, not the layout change.
+- Raise the section being text-edited above sibling runarounds so source mode stays readable.
+- Flip tool and page-add menus to the left when their trigger sits near the right edge.
+- Opaque white background for the inline HTML source editor.
+- Runaround toolbar icon rendering.
+
 ## [0.3.0] - 2026-10-01
 
 ### Added
@@ -45,6 +68,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Host chrome: fonts catalog, i18n (`en` / `it`), layout library, export hooks (print / PNG / PDF).
 - Published `dist` build: ESM bundle, compiled CSS, and TypeScript declarations.
 
+[0.4.0]: https://github.com/pieisalietoo/OpenPages/releases/tag/v0.4.0
 [0.3.0]: https://github.com/pieisalietoo/OpenPages/releases/tag/v0.3.0
 [0.2.1]: https://github.com/pieisalietoo/OpenPages/releases/tag/v0.2.1
 [0.2.0]: https://github.com/pieisalietoo/OpenPages/releases/tag/v0.2.0

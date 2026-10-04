@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@openpages/vue": "workspace:*",
-    "lucide-vue-next": "^0.544.0",
+    "@lucide/vue": "^1.52.0",
     "vue": "^3.5.21"
   },
   "devDependencies": {

@@ -8,9 +8,10 @@ import {
 } from './page'
 import { parseSection, type Section } from './section'
 
-export const CURRENT_SCHEMA_VERSION = 1 as const
+export const CURRENT_SCHEMA_VERSION = 2 as const
 
-export type SchemaVersion = typeof CURRENT_SCHEMA_VERSION
+/** Supported on-disk versions; parse accepts these and migrates up to current. */
+export type SchemaVersion = 1 | typeof CURRENT_SCHEMA_VERSION
 
 export interface DocumentMeta {
   title: string
@@ -84,6 +85,20 @@ export function serializeDocument(doc: OpenPagesDocument): string {
 }
 
 export function migrateDocument(doc: OpenPagesDocument): OpenPagesDocument {
+  if (doc.schemaVersion >= CURRENT_SCHEMA_VERSION) return doc
+
+  // v1 → v2: former "stretch" was CSS justify; rename so stretch can mean glyph scaleX.
+  for (const page of doc.pages) {
+    for (const section of page.sections) {
+      if (
+        (section.type === 'text' || section.type === 'headline') &&
+        section.textAlign === 'stretch'
+      ) {
+        section.textAlign = 'justify'
+      }
+    }
+  }
+  doc.schemaVersion = CURRENT_SCHEMA_VERSION
   return doc
 }
 
@@ -202,7 +217,7 @@ export function parseDocument(json: string): OpenPagesDocument {
     throw new Error('schemaVersion is required')
   }
 
-  if (raw.schemaVersion !== CURRENT_SCHEMA_VERSION) {
+  if (raw.schemaVersion !== 1 && raw.schemaVersion !== CURRENT_SCHEMA_VERSION) {
     throw new Error(`Unsupported schemaVersion: ${String(raw.schemaVersion)}`)
   }
 
@@ -219,7 +234,7 @@ export function parseDocument(json: string): OpenPagesDocument {
   }
 
   const doc: OpenPagesDocument = {
-    schemaVersion: CURRENT_SCHEMA_VERSION,
+    schemaVersion: raw.schemaVersion as SchemaVersion,
     meta: {
       title: requireString(raw.meta, 'title', 'meta'),
       createdAt: requireString(raw.meta, 'createdAt', 'meta'),

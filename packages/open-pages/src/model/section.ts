@@ -6,7 +6,7 @@ export type SectionType = 'text' | 'headline' | 'image' | 'panel' | 'runaround'
 
 export type ImageFit = 'cover' | 'contain' | 'fill'
 export type PanelBorderStyle = 'ink' | 'double' | 'rounded'
-export type TextAlign = 'left' | 'center' | 'right' | 'stretch'
+export type TextAlign = 'left' | 'center' | 'right' | 'justify' | 'stretch'
 export type VerticalAlign = 'top' | 'middle' | 'bottom'
 
 export interface SectionBase {
@@ -118,6 +118,93 @@ export interface AddRunaroundSectionInput {
   width: number
   height: number
   wrapOffset?: number
+}
+
+/** Optional overrides when adding a section (geometry/content); omitted fields use type defaults. */
+export type AddSectionOptions = {
+  x?: number
+  y?: number
+  width?: number
+  height?: number
+  content?: string
+  src?: string
+  alt?: string
+  fit?: ImageFit
+  borderStyle?: PanelBorderStyle
+  wrapOffset?: number
+}
+
+export type PageLike = {
+  sections: Section[]
+  margins?: { top: number; right: number; bottom: number; left: number }
+}
+
+const DEFAULT_ADD_SIZE: Record<SectionType, { width: number; height: number; content?: string }> = {
+  text: { width: 240, height: 80, content: 'New text' },
+  headline: { width: 360, height: 64, content: 'Headline' },
+  image: { width: 240, height: 160 },
+  panel: { width: 200, height: 160 },
+  runaround: { width: 160, height: 120 },
+}
+
+/**
+ * Add a section of any type to a page. Position defaults to page margins (or 0);
+ * size/content defaults depend on type and can be overridden.
+ */
+export function addSectionToPage(
+  page: PageLike,
+  type: SectionType,
+  options: AddSectionOptions = {},
+): Section {
+  const defaults = DEFAULT_ADD_SIZE[type]
+  const x = options.x ?? page.margins?.left ?? 0
+  const y = options.y ?? page.margins?.top ?? 0
+  const width = options.width ?? defaults.width
+  const height = options.height ?? defaults.height
+  switch (type) {
+    case 'text':
+      return addTextSection(page, {
+        x,
+        y,
+        width,
+        height,
+        content: options.content ?? defaults.content ?? 'New text',
+      })
+    case 'headline':
+      return addHeadlineSection(page, {
+        x,
+        y,
+        width,
+        height,
+        content: options.content ?? defaults.content ?? 'Headline',
+      })
+    case 'image':
+      return addImageSection(page, {
+        x,
+        y,
+        width,
+        height,
+        src: options.src ?? 'https://picsum.photos/seed/openpages/480/320',
+        alt: options.alt ?? 'Image',
+        fit: options.fit ?? 'cover',
+      })
+    case 'panel':
+      return addPanelSection(page, {
+        x,
+        y,
+        width,
+        height,
+        borderStyle: options.borderStyle ?? 'ink',
+      })
+    case 'runaround':
+      return addRunaroundSection(page, {
+        x,
+        y,
+        width,
+        height,
+        wrapOffset: options.wrapOffset,
+      })
+  }
 }
 
 function newId(prefix: string): string {
@@ -435,7 +522,10 @@ export function updateTextStyle(
   }
   if (patch.textAlign !== undefined) {
     section.textAlign =
-      patch.textAlign === 'center' || patch.textAlign === 'right' || patch.textAlign === 'stretch'
+      patch.textAlign === 'center' ||
+      patch.textAlign === 'right' ||
+      patch.textAlign === 'justify' ||
+      patch.textAlign === 'stretch'
         ? patch.textAlign
         : 'left'
   }
@@ -611,7 +701,9 @@ function requireString(record: Record<string, unknown>, key: string, path: strin
 }
 
 function parseTextAlign(value: unknown): TextAlign {
-  if (value === 'center' || value === 'right' || value === 'stretch') return value
+  if (value === 'center' || value === 'right' || value === 'justify' || value === 'stretch') {
+    return value
+  }
   return 'left'
 }
 

@@ -27,12 +27,26 @@ import {
   Trash2,
   Type,
   Ungroup,
-} from 'lucide-vue-next'
-import { computed, defineComponent, h, ref, watch } from 'vue'
+} from '@lucide/vue'
+import {
+  type Component,
+  computed,
+  defineComponent,
+  h,
+  markRaw,
+  nextTick,
+  ref,
+  toRaw,
+  watch,
+} from 'vue'
+import { POPOVER_MIN_WIDTH_PX, shouldAlignPopoverEnd } from '../tooling/popover-align'
 import type { ToolbarEntry } from '../tooling/toolbar-order'
 import type { ToolDefinition, ToolId, ToolScope } from '../tooling/tools'
 
-/** TextInitial-like glyph with a filled square instead of a letter. */
+/** Host-provided icon components keyed like built-in Lucide keys (`sparkles`, …). */
+export type ToolbarIconMap = Record<string, Component>
+
+/** TextInitial-like: drop-cap square top-left with wrap lines to the right and below. */
 const TextSquare = defineComponent({
   name: 'TextSquare',
   setup() {
@@ -53,27 +67,36 @@ const TextSquare = defineComponent({
           'aria-hidden': 'true',
         },
         [
-          h('path', { d: 'M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z' }),
-          h('path', { d: 'M14 2v4a2 2 0 0 0 2 2h4' }),
-          h('rect', { x: '8', y: '12', width: '8', height: '6', rx: '0.5' }),
+          // ~3/7 drop-cap square (replaces Lucide TextInitial's "A")
+          h('rect', { x: '3', y: '3', width: '9', height: '9', rx: '0.5' }),
+          h('path', { d: 'M15 5h6' }),
+          h('path', { d: 'M15 12h6' }),
+          h('path', { d: 'M3 19h18' }),
         ],
       )
   },
 })
 
-const props = defineProps<{
-  scope: ToolScope
-  entries: ToolbarEntry[]
-  openPopoverId?: ToolId | null
-  activeIds?: ToolId[]
-}>()
+const props = withDefaults(
+  defineProps<{
+    scope: ToolScope
+    entries: ToolbarEntry[]
+    openPopoverId?: ToolId | null
+    activeIds?: ToolId[]
+    /** Extra / override icons merged into the built-in map (host keys win). */
+    icons?: ToolbarIconMap
+  }>(),
+  {
+    icons: () => ({}),
+  },
+)
 
 const emit = defineEmits<{
   activate: [id: ToolId]
   togglePopover: [id: ToolId]
 }>()
 
-const iconMap: Record<string, LucideIcon | typeof TextSquare> = {
+const BUILTIN_ICON_MAP: Record<string, LucideIcon | typeof TextSquare> = {
   'layout-template': LayoutTemplate,
   save: Save,
   'book-type': BookType,
@@ -102,8 +125,17 @@ const iconMap: Record<string, LucideIcon | typeof TextSquare> = {
   ungroup: Ungroup,
 }
 
+const iconMap = computed(() => {
+  const extras: ToolbarIconMap = {}
+  for (const [key, icon] of Object.entries(props.icons ?? {})) {
+    extras[key] = markRaw(toRaw(icon))
+  }
+  return { ...BUILTIN_ICON_MAP, ...extras }
+})
+
 function iconFor(tool: ToolDefinition) {
-  return iconMap[tool.icon] ?? LayoutTemplate
+  const icon = iconMap.value[tool.icon] ?? LayoutTemplate
+  return markRaw(toRaw(icon))
 }
 
 const localOpen = ref<ToolId | null>(null)
@@ -116,6 +148,30 @@ watch(
 )
 
 const openId = computed(() => props.openPopoverId ?? localOpen.value)
+const alignEnd = ref(false)
+const toolbarEl = ref<HTMLElement | null>(null)
+
+watch(
+  openId,
+  async (id) => {
+    alignEnd.value = false
+    if (!id) return
+    await nextTick()
+    const toolbar = toolbarEl.value
+    if (!toolbar) return
+    const btn = toolbar.querySelector(`[data-op-tool="${id}"]`) as HTMLElement | null
+    const wrap = btn?.closest('.op-tool-wrap') as HTMLElement | null
+    if (!wrap) return
+    const anchor = wrap.getBoundingClientRect()
+    const container = toolbar.getBoundingClientRect()
+    alignEnd.value = shouldAlignPopoverEnd({
+      anchorLeft: anchor.left,
+      containerRight: container.right,
+      minWidth: POPOVER_MIN_WIDTH_PX,
+    })
+  },
+  { flush: 'post' },
+)
 
 const popoverTools = new Set<ToolId>([
   'layout.select',
@@ -158,7 +214,13 @@ function isToggle(id: ToolId): boolean {
 </script>
 
 <template>
-  <div class="op-toolbar" :data-op-toolbar="scope" role="toolbar" :aria-label="`${scope} tools`">
+  <div
+    ref="toolbarEl"
+    class="op-toolbar"
+    :data-op-toolbar="scope"
+    role="toolbar"
+    :aria-label="`${scope} tools`"
+  >
     <template v-for="(entry, index) in entries" :key="`${entry.kind}-${index}`">
       <span
         v-if="entry.kind === 'sep'"
@@ -192,6 +254,7 @@ function isToggle(id: ToolId): boolean {
         <div
           v-if="openId === entry.tool.id"
           class="op-tool-popover"
+          :class="{ 'is-align-end': alignEnd }"
           :data-op-popover="entry.tool.id"
           role="dialog"
           :aria-label="entry.tool.label"

@@ -1,13 +1,31 @@
 ﻿<script setup lang="ts">
 import {
+  AlignCenter,
+  AlignJustify,
+  AlignLeft,
+  AlignRight,
+  AlignVerticalJustifyCenter,
+  AlignVerticalJustifyEnd,
+  AlignVerticalJustifyStart,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
   Plus,
   Trash2,
-} from 'lucide-vue-next'
-import { computed, nextTick, onBeforeUnmount, onMounted, provide, reactive, ref, watch } from 'vue'
+} from '@lucide/vue'
+import {
+  computed,
+  defineComponent,
+  h,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  provide,
+  reactive,
+  ref,
+  watch,
+} from 'vue'
 import {
   createBrowserExportAdapters,
   createExporter,
@@ -33,11 +51,8 @@ import { createLayoutLibrary, type LayoutLibrary, type NamedLayout } from '../mo
 import { applyPagePreset, setPageMargins } from '../model/page'
 import { addBlankPage, deletePage, duplicatePage, movePage } from '../model/pages'
 import {
-  addHeadlineSection,
-  addImageSection,
-  addPanelSection,
-  addRunaroundSection,
-  addTextSection,
+  type AddSectionOptions,
+  addSectionToPage,
   bringForward,
   bringToFront,
   bumpTextSectionFonts,
@@ -62,16 +77,71 @@ import {
   selectSection,
   toggleSectionSelection,
 } from '../model/selection'
+import { POPOVER_MIN_WIDTH_PX, shouldAlignPopoverEnd } from '../tooling/popover-align'
 import { visibleSelectionTools } from '../tooling/selection-tools'
 import {
   DEFAULT_DOCUMENT_TOOLBAR,
   DEFAULT_SELECTION_TOOLBAR,
+  mergeDocumentToolbarOrder,
   resolveToolbarEntries,
   type ToolbarItemId,
 } from '../tooling/toolbar-order'
-import { createToolController, type ToolActivateEvent, type ToolId } from '../tooling/tools'
+import {
+  createToolController,
+  type ExtraDocumentTool,
+  type ToolActivateEvent,
+  type ToolId,
+} from '../tooling/tools'
 import OpenPagesRenderer from './OpenPagesRenderer.vue'
-import OpenPagesToolbar from './OpenPagesToolbar.vue'
+import OpenPagesToolbar, { type ToolbarIconMap } from './OpenPagesToolbar.vue'
+import OpShadowRoot from './OpShadowRoot.vue'
+
+/** Half-height A above a left↔right stretch arrow. */
+const AlignStretchIcon = defineComponent({
+  name: 'AlignStretchIcon',
+  setup() {
+    return () =>
+      h(
+        'svg',
+        {
+          xmlns: 'http://www.w3.org/2000/svg',
+          width: '24',
+          height: '24',
+          viewBox: '0 0 24 24',
+          fill: 'none',
+          stroke: 'currentColor',
+          'stroke-width': '2',
+          'stroke-linecap': 'round',
+          'stroke-linejoin': 'round',
+          class: 'lucide op-align-icon',
+          'aria-hidden': 'true',
+        },
+        [
+          // Compact A in the upper half
+          h('path', { d: 'M9 11 L12 3 L15 11' }),
+          h('path', { d: 'M10.2 8h3.6' }),
+          // Bidirectional stretch arrow with clearance under the A
+          h('path', { d: 'M4 18h16' }),
+          h('path', { d: 'M7 15 L4 18 L7 21' }),
+          h('path', { d: 'M17 15 L20 18 L17 21' }),
+        ],
+      )
+  },
+})
+
+const H_ALIGN_ICONS = {
+  left: AlignLeft,
+  center: AlignCenter,
+  right: AlignRight,
+  justify: AlignJustify,
+  stretch: AlignStretchIcon,
+} as const
+
+const V_ALIGN_ICONS = {
+  top: AlignVerticalJustifyStart,
+  middle: AlignVerticalJustifyCenter,
+  bottom: AlignVerticalJustifyEnd,
+} as const
 
 const props = withDefaults(
   defineProps<{
@@ -104,12 +174,25 @@ const props = withDefaults(
     documentToolbar?: ToolbarItemId[]
     /** Ordered selection toolbar ids (`sep` / `grow` allowed). Omitted ids stay hidden. */
     selectionToolbar?: ToolbarItemId[]
+    /**
+     * Extra document-toolbar tools from the host (id, label, icon, optional action).
+     * With the default order they are inserted before the last `grow`; with a custom
+     * `documentToolbar` they appear only if their ids are listed in that order.
+     */
+    extraDocumentTools?: ExtraDocumentTool[]
+    /**
+     * Extra / override toolbar icons keyed by the same strings used in `icon` fields
+     * (built-ins + host keys). Merged into the toolbar icon map; host keys win.
+     */
+    toolbarIcons?: ToolbarIconMap
   }>(),
   {
     toolEnabled: () => ({}),
     layouts: () => [],
     fonts: () => BUILTIN_FONTS,
     locale: 'en',
+    extraDocumentTools: () => [],
+    toolbarIcons: () => ({}),
   },
 )
 
@@ -319,11 +402,26 @@ function setLayoutBaselineFromActive() {
 const documentToolbarEntries = computed(() => {
   toolEpoch.value
   i18n.locale.value
-  const order = props.documentToolbar ?? DEFAULT_DOCUMENT_TOOLBAR
-  const available = tools.list('document').map((tool) => ({
-    ...tool,
-    label: toolLabel(tool.id, tool.label),
-  }))
+  const extras = props.extraDocumentTools ?? []
+  const customOrder = props.documentToolbar != null
+  const order = mergeDocumentToolbarOrder(
+    props.documentToolbar ?? DEFAULT_DOCUMENT_TOOLBAR,
+    extras.map((tool) => tool.id),
+    { autoInsert: !customOrder },
+  )
+  const available = [
+    ...tools.list('document').map((tool) => ({
+      ...tool,
+      label: toolLabel(tool.id, tool.label),
+    })),
+    ...extras.map((tool) => ({
+      id: tool.id,
+      scope: 'document' as const,
+      label: tool.label,
+      icon: tool.icon,
+      enabled: true,
+    })),
+  ]
   return resolveToolbarEntries(order, available)
 })
 
@@ -377,6 +475,23 @@ const editingPageNumber = ref(false)
 const pageNumberDraft = ref('')
 const pageJumpInput = ref<HTMLInputElement | null>(null)
 const addMenuOpen = ref(false)
+const addMenuAlignEnd = ref(false)
+const pageAddEl = ref<HTMLElement | null>(null)
+const pageNavEl = ref<HTMLElement | null>(null)
+
+watch(addMenuOpen, async (open) => {
+  addMenuAlignEnd.value = false
+  if (!open) return
+  await nextTick()
+  const anchor = pageAddEl.value?.getBoundingClientRect()
+  const container = pageNavEl.value?.getBoundingClientRect()
+  if (!anchor || !container) return
+  addMenuAlignEnd.value = shouldAlignPopoverEnd({
+    anchorLeft: anchor.left,
+    containerRight: container.right,
+    minWidth: POPOVER_MIN_WIDTH_PX,
+  })
+})
 
 const pageCount = computed(() => props.modelValue.pages.length)
 
@@ -585,6 +700,13 @@ async function exportLayoutJson(mode: 'clipboard' | 'download') {
 }
 
 function activateTool(id: ToolId, payload?: unknown) {
+  const extra = (props.extraDocumentTools ?? []).find((tool) => tool.id === id)
+  if (extra) {
+    emit('toolActivate', { id, payload })
+    extra.action?.(payload)
+    return
+  }
+
   if (!tools.isEnabled(id)) return
 
   if (id === 'view.magnet') {
@@ -696,6 +818,7 @@ function selectLayout(name: string) {
   if (!chosen) return
   emit('update:modelValue', chosen.document)
   emit('update:json', serializeDocument(chosen.document))
+  history.reset(serializeDocument(chosen.document))
   setLayoutBaselineFromActive()
   clearSelection(selection)
   emitSelection()
@@ -797,37 +920,16 @@ function onMarginInput(side: 'top' | 'right' | 'bottom' | 'left', raw: string) {
   bumpDocument()
 }
 
-function addSectionOfType(type: SectionType) {
-  const page = currentPage.value
-  const x = page.margins.left
-  const y = page.margins.top
-  switch (type) {
-    case 'text':
-      addTextSection(page, { x, y, width: 240, height: 80, content: 'New text' })
-      break
-    case 'headline':
-      addHeadlineSection(page, { x, y, width: 360, height: 64, content: 'Headline' })
-      break
-    case 'image':
-      addImageSection(page, {
-        x,
-        y,
-        width: 240,
-        height: 160,
-        src: 'https://picsum.photos/seed/openpages/480/320',
-        alt: 'Image',
-        fit: 'cover',
-      })
-      break
-    case 'panel':
-      addPanelSection(page, { x, y, width: 200, height: 160, borderStyle: 'ink' })
-      break
-    case 'runaround':
-      addRunaroundSection(page, { x, y, width: 160, height: 120 })
-      break
-  }
+function addSectionOfType(type: SectionType, options?: AddSectionOptions) {
+  const created = addSectionToPage(currentPage.value, type, options)
   bumpDocument()
   openPopoverId.value = null
+  return created
+}
+
+/** Host API: add a section to the current page (optional content / geometry). */
+function addSection(type: SectionType, options?: AddSectionOptions) {
+  return addSectionOfType(type, options)
 }
 
 function patchSelectedStyle(patch: {
@@ -935,6 +1037,7 @@ function setToolEnabled(id: ToolId, enabled: boolean) {
 defineExpose({
   activateTool,
   setToolEnabled,
+  addSection,
   tools,
   layouts,
   selection,
@@ -942,11 +1045,13 @@ defineExpose({
 </script>
 
 <template>
+  <OpShadowRoot>
   <div class="op-editor" data-op-editor>
     <OpenPagesToolbar
       v-if="documentToolbarEntries"
       scope="document"
       :entries="documentToolbarEntries"
+      :icons="toolbarIcons"
       :open-popover-id="openPopoverId"
       :active-ids="activeToolIds"
       @activate="activateTool"
@@ -1268,6 +1373,7 @@ defineExpose({
             v-if="selectionToolbarEntries"
             scope="selection"
             :entries="selectionToolbarEntries"
+            :icons="toolbarIcons"
             :open-popover-id="openPopoverId"
             :active-ids="activeToolIds"
             @activate="activateTool"
@@ -1469,6 +1575,7 @@ defineExpose({
                 <label class="op-field">
                   Count
                   <input
+                    class="op-columns-input"
                     data-op-columns
                     type="number"
                     min="1"
@@ -1481,7 +1588,7 @@ defineExpose({
                     "
                   />
                 </label>
-                <label class="op-field op-field-check">
+                <label class="op-field op-field--check">
                   <input
                     data-op-text-fit
                     type="checkbox"
@@ -1498,15 +1605,17 @@ defineExpose({
                   {{ i18n.t('editor.alignHorizontal') }}
                   <div class="op-align-row">
                     <button
-                      v-for="align in (['left', 'center', 'right', 'stretch'] as const)"
+                      v-for="align in (['left', 'center', 'right', 'justify', 'stretch'] as const)"
                       :key="align"
                       type="button"
-                      class="op-save-btn"
+                      class="op-align-btn"
                       :class="{ 'is-active': primarySelected.textAlign === align }"
                       :data-op-align-h="align"
+                      :title="i18n.t(`editor.align.${align}`)"
+                      :aria-label="i18n.t(`editor.align.${align}`)"
                       @click="patchSelectedTextStyle({ textAlign: align })"
                     >
-                      {{ i18n.t(`editor.align.${align}`) }}
+                      <component :is="H_ALIGN_ICONS[align]" class="op-align-icon" :size="16" :stroke-width="2" />
                     </button>
                   </div>
                 </div>
@@ -1517,12 +1626,14 @@ defineExpose({
                       v-for="align in (['top', 'middle', 'bottom'] as const)"
                       :key="align"
                       type="button"
-                      class="op-save-btn"
+                      class="op-align-btn"
                       :class="{ 'is-active': primarySelected.verticalAlign === align }"
                       :data-op-align-v="align"
+                      :title="i18n.t(`editor.align.${align}`)"
+                      :aria-label="i18n.t(`editor.align.${align}`)"
                       @click="patchSelectedTextStyle({ verticalAlign: align })"
                     >
-                      {{ i18n.t(`editor.align.${align}`) }}
+                      <component :is="V_ALIGN_ICONS[align]" class="op-align-icon" :size="16" :stroke-width="2" />
                     </button>
                   </div>
                 </div>
@@ -1533,8 +1644,12 @@ defineExpose({
       </OpenPagesRenderer>
     </div>
 
-    <nav class="op-page-nav" data-op-page-nav :aria-label="i18n.t('editor.pages')">
-      <button
+    <nav
+      ref="pageNavEl"
+      class="op-page-nav"
+      data-op-page-nav
+      :aria-label="i18n.t('editor.pages')"
+    >      <button
         type="button"
         data-op-page-prev
         :aria-label="i18n.t('editor.previousPage')"
@@ -1577,7 +1692,7 @@ defineExpose({
       >
         <ChevronRight class="op-page-icon" aria-hidden="true" />
       </button>
-      <div class="op-page-add">
+      <div ref="pageAddEl" class="op-page-add">
         <button
           type="button"
           data-op-page-add
@@ -1587,8 +1702,12 @@ defineExpose({
         >
           <Plus class="op-page-icon" aria-hidden="true" />
         </button>
-        <div v-if="addMenuOpen" class="op-page-add-menu" data-op-page-add-menu>
-          <button type="button" data-op-page-add-copy @click="addPage('copy')">
+        <div
+          v-if="addMenuOpen"
+          class="op-page-add-menu"
+          :class="{ 'is-align-end': addMenuAlignEnd }"
+          data-op-page-add-menu
+        >          <button type="button" data-op-page-add-copy @click="addPage('copy')">
             {{ i18n.t('editor.copyCurrentPage') }}
           </button>
           <button type="button" data-op-page-add-blank @click="addPage('blank')">
@@ -1625,4 +1744,5 @@ defineExpose({
       </button>
     </nav>
   </div>
+  </OpShadowRoot>
 </template>

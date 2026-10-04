@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* :host required: package CSS is adopted into the shadow root, and
+   :host { all: initial } clears inherited custom properties. */
+:host,
 :root {
   --op-accent: #1a5f4a;
   --op-selection: #2563eb;
@@ -344,6 +347,11 @@
   box-shadow: 0 1px 4px rgb(0 0 0 / 12%);
 }
 
+.op-page-add-menu.is-align-end {
+  left: auto;
+  right: 0;
+}
+
 .op-page-add-menu button {
   justify-content: flex-start;
   width: 100%;
@@ -429,6 +437,11 @@
   border: 1px solid #b7c4bc;
   background: #fff;
   box-shadow: 0 4px 16px rgb(0 0 0 / 12%);
+}
+
+.op-tool-popover.is-align-end {
+  left: auto;
+  right: 0;
 }
 
 .op-popover-title {
@@ -749,12 +762,32 @@
 .op-align-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem;
+  gap: 0.25rem;
 }
 
-.op-align-row .op-save-btn.is-active {
+.op-align-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 1px solid #9aafa3;
+  background: #fff;
+  color: #1f2d26;
+  cursor: pointer;
+}
+
+.op-align-btn.is-active {
+  border-color: var(--op-selection);
+  color: var(--op-selection);
   outline: 2px solid var(--op-selection);
   outline-offset: 1px;
+}
+
+.op-align-icon {
+  width: 1rem;
+  height: 1rem;
 }
 
 .op-field {
@@ -773,10 +806,20 @@
   background: #fff;
 }
 
+.op-columns-input {
+  max-width: 3.5rem;
+  width: 3.5rem;
+}
+
 .op-field--check {
   flex-direction: row;
   align-items: center;
   gap: 0.4rem;
+}
+
+.op-section.is-editing {
+  /* Above sibling sections (DOM order / runaround) but below floating chrome + doc toolbar. */
+  z-index: 40;
 }
 
 .op-text-chrome {
@@ -890,7 +933,7 @@
   padding: 0.25rem;
   border: none;
   resize: none;
-  background: color-mix(in srgb, #1a1a1a 4%, transparent);
+  background: #fff;
   color: inherit;
   font-family: "Courier New", monospace;
   font-size: 0.85em;

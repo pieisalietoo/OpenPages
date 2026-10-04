@@ -79,3 +79,24 @@ export function resolveToolbarEntries(
   if (toolCount === 0) return null
   return entries
 }
+
+/**
+ * Merge host extra tool ids into a document toolbar order.
+ * When `autoInsert` is true (default order), inserts missing extras before the
+ * last `grow`, or appends them if there is no grow. When false (custom host
+ * order), returns `order` unchanged — extras must be listed explicitly.
+ */
+export function mergeDocumentToolbarOrder(
+  order: readonly ToolbarItemId[],
+  extraIds: readonly string[],
+  options: { autoInsert: boolean },
+): ToolbarItemId[] {
+  if (!options.autoInsert) return [...order]
+  const result: ToolbarItemId[] = [...order]
+  const missing = extraIds.filter((id) => !result.includes(id as ToolbarItemId))
+  if (missing.length === 0) return result
+  const lastGrow = result.lastIndexOf('grow')
+  const insertAt = lastGrow >= 0 ? lastGrow : result.length
+  result.splice(insertAt, 0, ...missing)
+  return result
+}

@@ -39,6 +39,18 @@ export interface ToolDefinition {
 export type ToolChangeEvent = { id: ToolId; enabled: boolean }
 export type ToolActivateEvent = { id: ToolId; payload?: unknown }
 
+/** Host-defined document toolbar button (icon key + label + optional action). */
+export type ExtraDocumentTool = {
+  id: string
+  label: string
+  /**
+   * Icon key resolved via OpenPagesToolbar’s map (built-ins) plus host `toolbarIcons`.
+   * Unknown keys fall back to layout-template.
+   */
+  icon: string
+  action?: (payload?: unknown) => void
+}
+
 export type ToolEventMap = {
   toolChange: ToolChangeEvent
   toolActivate: ToolActivateEvent

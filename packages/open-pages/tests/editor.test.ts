@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it, vi } from 'vitest'
+import { defineComponent, h } from 'vue'
 import OpenPagesEditor from '../src/components/OpenPagesEditor.vue'
 import { createDocument, parseDocument, serializeDocument } from '../src/model/document'
 import { createFeatureDemoDocument } from '../src/model/feature-demo'
@@ -359,5 +360,115 @@ describe('OpenPagesEditor chrome', () => {
     await wrapper.get('[data-op-overwrite-confirm-yes]').trigger('click')
     expect(layouts.getActive()?.name).toBe('Other')
     expect(layouts.getActive()?.document.pages[0]?.sections).toHaveLength(1)
+  })
+
+  it('shows extraDocumentTools before the last grow by default and runs their action', async () => {
+    const action = vi.fn()
+    const wrapper = mount(OpenPagesEditor, {
+      props: {
+        modelValue: createDocument({ title: 'Extras' }),
+        extraDocumentTools: [{ id: 'host.stamp', label: 'Stamp', icon: 'plus', action }],
+      },
+    })
+
+    const toolIds = wrapper
+      .findAll('[data-op-toolbar="document"] [data-op-tool]')
+      .map((el) => el.attributes('data-op-tool'))
+    const stampAt = toolIds.indexOf('host.stamp')
+    const setupAt = toolIds.indexOf('page.setup')
+    expect(stampAt).toBeGreaterThan(-1)
+    expect(setupAt).toBeGreaterThan(stampAt)
+    // grow sits between stamp and page.setup in the default order
+    expect(
+      wrapper
+        .findAll('[data-op-toolbar="document"] > *')
+        .some((el) => el.classes().includes('op-toolbar-grow')),
+    ).toBe(true)
+
+    await wrapper.get('[data-op-tool="host.stamp"]').trigger('click')
+    expect(action).toHaveBeenCalledTimes(1)
+    expect(wrapper.emitted('toolActivate')?.at(-1)?.[0]).toMatchObject({ id: 'host.stamp' })
+    wrapper.unmount()
+  })
+
+  it('omits extraDocumentTools unless listed when documentToolbar is customized', async () => {
+    const wrapper = mount(OpenPagesEditor, {
+      props: {
+        modelValue: createDocument({ title: 'CustomOrder' }),
+        documentToolbar: ['layout.select', 'page.setup'],
+        extraDocumentTools: [{ id: 'host.stamp', label: 'Stamp', icon: 'plus' }],
+      },
+    })
+    expect(wrapper.find('[data-op-tool="host.stamp"]').exists()).toBe(false)
+
+    await wrapper.setProps({
+      documentToolbar: ['layout.select', 'host.stamp', 'page.setup'],
+    })
+    expect(wrapper.find('[data-op-tool="host.stamp"]').exists()).toBe(true)
+    wrapper.unmount()
+  })
+
+  it('merges toolbarIcons into the toolbar icon map for host-defined keys', () => {
+    const HostIcon = defineComponent({
+      name: 'HostSparklesIcon',
+      setup() {
+        return () => h('svg', { 'data-op-host-icon': 'sparkles', class: 'op-tool-icon' })
+      },
+    })
+    const wrapper = mount(OpenPagesEditor, {
+      props: {
+        modelValue: createDocument({ title: 'HostIcons' }),
+        extraDocumentTools: [{ id: 'host.ai', label: 'AI', icon: 'sparkles' }],
+        toolbarIcons: { sparkles: HostIcon },
+      },
+    })
+    const btn = wrapper.get('[data-op-tool="host.ai"]')
+    expect(btn.attributes('data-op-tool-icon')).toBe('sparkles')
+    expect(btn.find('[data-op-host-icon="sparkles"]').exists()).toBe(true)
+    expect(btn.find('.lucide-layout-template').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('exposes addSection for hosts to insert typed content with optional geometry', async () => {
+    const doc = createDocument({ title: 'AddAPI' })
+    const wrapper = mount(OpenPagesEditor, {
+      props: {
+        modelValue: doc,
+        'onUpdate:modelValue': (value: typeof doc) => {
+          void wrapper.setProps({ modelValue: value })
+        },
+      },
+    })
+    const vm = wrapper.vm as unknown as {
+      addSection: (
+        type: string,
+        options?: {
+          content?: string
+          x?: number
+          y?: number
+          width?: number
+          height?: number
+        },
+      ) => { id: string; type: string; content?: string; x: number; y: number }
+    }
+
+    const created = vm.addSection('text', {
+      content: '<p>Host block</p>',
+      x: 40,
+      y: 60,
+      width: 180,
+      height: 90,
+    })
+    expect(created).toMatchObject({
+      type: 'text',
+      content: expect.stringContaining('Host block'),
+      x: 40,
+      y: 60,
+      width: 180,
+      height: 90,
+    })
+    expect(wrapper.props('modelValue').pages[0]?.sections).toHaveLength(1)
+    expect(wrapper.emitted('update:modelValue')).toBeTruthy()
+    wrapper.unmount()
   })
 })

@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 import OpenPagesEditor from '../src/components/OpenPagesEditor.vue'
@@ -119,7 +122,7 @@ describe('text editing, variants, columns, transparent bg', () => {
     expect(s.textFit).toBe('fill')
   })
 
-  it('columns popover sets horizontal and vertical alignment, including stretch', async () => {
+  it('columns popover sets horizontal and vertical alignment, including justify and stretch', async () => {
     const doc = createDocument({ title: 'Align' })
     const page = firstPage(doc)
     const section = addTextSection(page, {
@@ -136,29 +139,61 @@ describe('text editing, variants, columns, transparent bg', () => {
     await wrapper.get(`[data-op-section="${section.id}"]`).trigger('pointerdown', { button: 0 })
     await wrapper.get('[data-op-tool="section.columns"]').trigger('click')
 
+    // Icon buttons (not text labels) for align controls.
+    for (const h of ['left', 'center', 'right', 'justify', 'stretch'] as const) {
+      const btn = wrapper.get(`[data-op-align-h="${h}"]`)
+      expect(btn.find('svg').exists()).toBe(true)
+      expect(btn.text().trim()).toBe('')
+    }
+    for (const v of ['top', 'middle', 'bottom'] as const) {
+      const btn = wrapper.get(`[data-op-align-v="${v}"]`)
+      expect(btn.find('svg').exists()).toBe(true)
+      expect(btn.text().trim()).toBe('')
+    }
+
     await wrapper.get('[data-op-align-h="center"]').trigger('click')
     expect(section.textAlign).toBe('center')
+    await wrapper.get('[data-op-align-h="justify"]').trigger('click')
+    expect(section.textAlign).toBe('justify')
     await wrapper.get('[data-op-align-h="stretch"]').trigger('click')
     expect(section.textAlign).toBe('stretch')
     await wrapper.get('[data-op-align-v="middle"]').trigger('click')
     expect(section.verticalAlign).toBe('middle')
     await wrapper.get('[data-op-align-v="bottom"]').trigger('click')
     expect(section.verticalAlign).toBe('bottom')
+
+    const columnsInput = wrapper.get('[data-op-columns]')
+    expect(columnsInput.classes()).toContain('op-columns-input')
+    const css = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), '../src/style.css'),
+      'utf8',
+    )
+    expect(css).toMatch(/\.op-columns-input\s*\{[^}]*max-width:\s*3\.5rem/s)
+
+    const fitLabel = wrapper.get('label.op-field--check')
+    expect(fitLabel.classes()).toContain('op-field--check')
+    expect(fitLabel.find('[data-op-text-fit]').exists()).toBe(true)
+
     wrapper.unmount()
 
-    const renderer = mount(OpenPagesRenderer, {
+    section.textAlign = 'justify'
+    const justifyRenderer = mount(OpenPagesRenderer, {
       props: { document: doc, pageId: page.id, selectedSectionIds: [section.id] },
     })
-    const line = renderer.get('[data-op-line]')
-    const style = line.attributes('style') ?? ''
-    expect(style).toMatch(/text-align:\s*justify/)
-    // Single layout lines are one CSS line each; justify alone leaves them flush-left.
-    expect(style).toMatch(/text-align-last:\s*justify/)
-    expect(style).toMatch(/white-space:\s*normal/)
-    const width = Number(/width:\s*([\d.]+)px/.exec(style)?.[1] ?? NaN)
-    expect(width).toBeGreaterThanOrEqual(section.width - 1)
-    const top = Number(/top:\s*([\d.]+)px/.exec(style)?.[1] ?? NaN)
-    expect(top).toBeGreaterThan(0)
-    renderer.unmount()
+    const justifyStyle = justifyRenderer.get('[data-op-line]').attributes('style') ?? ''
+    expect(justifyStyle).toMatch(/text-align:\s*justify/)
+    expect(justifyStyle).toMatch(/text-align-last:\s*justify/)
+    expect(justifyStyle).toMatch(/white-space:\s*normal/)
+    justifyRenderer.unmount()
+
+    section.textAlign = 'stretch'
+    const stretchRenderer = mount(OpenPagesRenderer, {
+      props: { document: doc, pageId: page.id, selectedSectionIds: [section.id] },
+    })
+    const stretchStyle = stretchRenderer.get('[data-op-line]').attributes('style') ?? ''
+    expect(stretchStyle).toMatch(/transform:\s*scaleX\(/)
+    expect(stretchStyle).toMatch(/transform-origin:\s*left/)
+    expect(stretchStyle).not.toMatch(/text-align-last:\s*justify/)
+    stretchRenderer.unmount()
   })
 })

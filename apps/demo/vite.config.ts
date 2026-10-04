@@ -11,8 +11,7 @@ export default defineConfig({
   plugins: [vue(), tailwindcss()],
   resolve: {
     // Local DX: demo uses package sources (HMR), not dist.
-    // Alias the package root (src/), not index.ts — otherwise
-    // `@openpages/vue/style.css` resolves to `index.ts/style.css`.
+    // Alias the package root (src/), not index.ts.
     alias: {
       '@openpages/vue': openPagesSrc,
     },

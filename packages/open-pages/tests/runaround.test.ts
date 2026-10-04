@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
+import { nextTick } from 'vue'
 import OpenPagesEditor from '../src/components/OpenPagesEditor.vue'
 import OpenPagesRenderer from '../src/components/OpenPagesRenderer.vue'
 import { createDocument, parseDocument, serializeDocument } from '../src/model/document'
@@ -209,5 +210,55 @@ describe('runaround sections', () => {
       'self',
     )
     expect(zones.map((z) => z.id)).toEqual(['other'])
+  })
+
+  it('keeps the inline text editor above later runaround sections in source mode', async () => {
+    const doc = createDocument({ title: 'EditZ' })
+    const page = firstPage(doc)
+    const text = addTextSection(page, {
+      x: 10,
+      y: 10,
+      width: 200,
+      height: 120,
+      content: '<p>Covered?</p>',
+    })
+    addRunaroundSection(page, {
+      x: 40,
+      y: 40,
+      width: 140,
+      height: 80,
+    })
+
+    const wrapper = mount(OpenPagesRenderer, {
+      props: { document: doc, pageId: page.id, selectedSectionIds: [text.id] },
+      attachTo: document.body,
+    })
+
+    await wrapper.get(`[data-op-section="${text.id}"]`).trigger('dblclick')
+    await nextTick()
+    await wrapper.get('[data-op-chrome-source-toggle]').trigger('click')
+    await nextTick()
+
+    const editing = wrapper.get(`[data-op-section="${text.id}"]`)
+    expect(editing.classes()).toContain('is-editing')
+    expect(wrapper.find('[data-op-text-source]').exists()).toBe(true)
+
+    const editingZ = Number.parseInt(getComputedStyle(editing.element as HTMLElement).zIndex, 10)
+    const runaround = wrapper.get('.op-section--runaround').element as HTMLElement
+    const runaroundRaw = getComputedStyle(runaround).zIndex
+    const runaroundZ = Number.parseInt(runaroundRaw, 10)
+    expect(Number.isFinite(editingZ)).toBe(true)
+    expect(editingZ).toBeGreaterThan(Number.isFinite(runaroundZ) ? runaroundZ : 0)
+
+    const chrome = wrapper.get('[data-op-text-chrome]').element as HTMLElement
+    const chromeZ = Number.parseInt(getComputedStyle(chrome).zIndex, 10)
+    expect(chromeZ).toBeGreaterThan(editingZ)
+
+    const source = wrapper.get('[data-op-text-source]').element as HTMLElement
+    expect(getComputedStyle(source).backgroundColor).toMatch(
+      /^(#fff|#ffffff|rgb\(\s*255,\s*255,\s*255\s*\))$/i,
+    )
+
+    wrapper.unmount()
   })
 })

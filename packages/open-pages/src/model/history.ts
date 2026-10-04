@@ -1,5 +1,7 @@
 export type HistoryController = {
   push: (snapshot: string) => void
+  /** Replace present and clear undo/redo (e.g. after switching named layout). */
+  reset: (snapshot: string) => void
   undo: () => string | null
   redo: () => string | null
   canUndo: () => boolean
@@ -22,6 +24,11 @@ export function createHistory(options?: { limit?: number }): HistoryController {
       }
       present = snapshot
       future.length = 0
+    },
+    reset(snapshot: string) {
+      past.length = 0
+      future.length = 0
+      present = snapshot
     },
     undo() {
       if (past.length === 0 || present === null) return null

@@ -17,11 +17,7 @@ pnpm add @openpages/vue
 
 ## Quick start
 
-Import the package stylesheet once (compiled chrome styles):
-
-```ts
-import '@openpages/vue/style.css'
-```
+Styles are self-contained (Shadow DOM). Do **not** import `@openpages/vue/style.css` in the host.
 
 Mount the editor:
 
@@ -70,8 +66,6 @@ import {
   createBrowserExportAdapters,
   // …section helpers, fonts, snap, tooling
 } from '@openpages/vue'
-
-import '@openpages/vue/style.css'
 ```
 
 Types ship with the package (`dist/index.d.ts`).

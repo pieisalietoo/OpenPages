@@ -7,6 +7,15 @@ import { createDocument } from '../src/model/document'
 import { sanitizeTextHtml } from '../src/model/sanitize-html'
 import { addTextSection, setSectionHidden } from '../src/model/section'
 
+/** `document.activeElement` stops at the shadow host; pierce to the real focus. */
+function deepActiveElement(doc: Document = document): Element | null {
+  let el: Element | null = doc.activeElement
+  while (el?.shadowRoot?.activeElement) {
+    el = el.shadowRoot.activeElement
+  }
+  return el
+}
+
 function firstPage(doc: ReturnType<typeof createDocument>) {
   const page = doc.pages[0]
   if (!page) throw new Error('expected page')
@@ -269,14 +278,14 @@ describe('chrome form controls stay usable while editing', () => {
 
     ;(sizeInput.element as HTMLInputElement).value = '18'
     await sizeInput.trigger('input')
-    expect(document.activeElement).toBe(sizeInput.element)
+    expect(deepActiveElement()).toBe(sizeInput.element)
     expect(section.fontSize).toBe(14)
     expect(section.content).toMatch(/font-size:\s*18px/i)
     expect(edit.querySelector('[data-op-chrome-sel]')).toBeTruthy()
 
     ;(sizeInput.element as HTMLInputElement).value = '20'
     await sizeInput.trigger('input')
-    expect(document.activeElement).toBe(sizeInput.element)
+    expect(deepActiveElement()).toBe(sizeInput.element)
     expect(section.fontSize).toBe(14)
     expect(section.content).toMatch(/font-size:\s*20px/i)
 

@@ -55,3 +55,4 @@ export {
   type SelectionRect,
   selectionRects,
 } from './selection'
+export { horizontalStretchScale } from './stretch'

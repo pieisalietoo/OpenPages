@@ -29,7 +29,7 @@ export default defineConfig({
       fileName: (_format, entryName) => (entryName === 'style' ? 'style.js' : 'open-pages.js'),
     },
     rollupOptions: {
-      external: ['vue', 'lucide-vue-next'],
+      external: ['vue', '@lucide/vue'],
       output: {
         globals: {
           vue: 'Vue',
@@ -42,6 +42,9 @@ export default defineConfig({
   test: {
     environment: 'happy-dom',
     globals: true,
+    setupFiles: ['./tests/setup-shadow.ts'],
     include: ['tests/**/*.test.ts', 'src/**/*.test.ts'],
+    // Default css.include is [] → CSS/?inline exports "". Shadow injection needs the real stylesheet text.
+    css: true,
   },
 })
