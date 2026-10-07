@@ -19,6 +19,7 @@ export const DEFAULT_DOCUMENT_TOOLBAR: readonly ToolbarItemId[] = [
   'layout.select',
   'layout.save',
   'layout.exportJson',
+  'layout.importJson',
   'fonts.manage',
   'sep',
   'export.print',

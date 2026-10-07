@@ -28,6 +28,7 @@ function textStub(id: string): Section {
     width: 10,
     height: 10,
     content: 'hi',
+    htmlMode: false,
     locked: false,
     hidden: false,
     runaround: false,

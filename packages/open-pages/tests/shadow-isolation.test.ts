@@ -115,4 +115,75 @@ describe('shadow DOM host style isolation', () => {
 
     wrapper.unmount()
   })
+
+  it('injects OpenPagesEditor shadowStyles into the shadow root', async () => {
+    const wrapper = mount(OpenPagesEditor, {
+      props: {
+        modelValue: createDocument({ title: 'HostCss' }),
+        shadowStyles: '[data-op-host-mark]{color:rgb(255,0,0)}',
+      },
+      attachTo: document.body,
+    })
+
+    const host = wrapper.element as HTMLElement
+    const shadow = host.shadowRoot
+    expect(shadow).toBeTruthy()
+    if (!shadow) return
+
+    const mark = document.createElement('span')
+    mark.setAttribute('data-op-host-mark', '')
+    mark.textContent = 'x'
+    shadow.querySelector('[data-op-shadow-mount]')?.appendChild(mark)
+
+    const color = getComputedStyle(mark).color
+    expect(color).toMatch(/^(#ff0000|rgb\(\s*255,\s*0,\s*0\s*\))$/i)
+
+    wrapper.unmount()
+  })
+
+  it('updates injected styles when shadowStyles prop changes', async () => {
+    const wrapper = mount(OpenPagesEditor, {
+      props: {
+        modelValue: createDocument({ title: 'HostCssUpdate' }),
+        shadowStyles: '[data-op-host-mark]{color:rgb(255,0,0)}',
+      },
+      attachTo: document.body,
+    })
+
+    const host = wrapper.element as HTMLElement
+    const shadow = host.shadowRoot
+    expect(shadow).toBeTruthy()
+    if (!shadow) return
+
+    const mark = document.createElement('span')
+    mark.setAttribute('data-op-host-mark', '')
+    mark.textContent = 'x'
+    shadow.querySelector('[data-op-shadow-mount]')?.appendChild(mark)
+
+    expect(getComputedStyle(mark).color).toMatch(/^(#ff0000|rgb\(\s*255,\s*0,\s*0\s*\))$/i)
+
+    await wrapper.setProps({
+      shadowStyles: '[data-op-host-mark]{color:rgb(0,128,0)}',
+    })
+    await wrapper.vm.$nextTick()
+
+    // happy-dom may cache getComputedStyle for adoptedStyleSheets; assert sheet text.
+    const sheetText = [...(shadow.adoptedStyleSheets ?? [])]
+      .map((sheet) => {
+        try {
+          return [...sheet.cssRules].map((rule) => rule.cssText).join('\n')
+        } catch {
+          return ''
+        }
+      })
+      .join('\n')
+    const tagText = [...shadow.querySelectorAll('style')]
+      .map((el) => el.textContent ?? '')
+      .join('\n')
+    const css = `${sheetText}\n${tagText}`
+    expect(css).toMatch(/data-op-host-mark[^}]*rgb\(\s*0\s*,\s*128\s*,\s*0\s*\)/)
+    expect(css).not.toMatch(/rgb\(\s*255\s*,\s*0\s*,\s*0\s*\)/)
+
+    wrapper.unmount()
+  })
 })

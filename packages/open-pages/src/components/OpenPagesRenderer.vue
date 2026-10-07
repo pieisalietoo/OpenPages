@@ -4,6 +4,7 @@ import {
   AArrowUp,
   Bold,
   CodeXml,
+  FileCode2,
   Italic,
   Strikethrough,
   TextInitial,
@@ -22,7 +23,7 @@ import {
   type OpenPagesFont,
 } from '../model/fonts'
 import { relativeExclusionsForHost, runaroundZonesForHost } from '../model/runaround'
-import { sanitizeTextHtml } from '../model/sanitize-html'
+import { sanitizePanelHtml, sanitizeTextHtml } from '../model/sanitize-html'
 import {
   bumpTextSectionFonts,
   deleteSection,
@@ -92,11 +93,17 @@ const props = withDefaults(
     showHidden?: boolean
     fonts?: OpenPagesFont[]
     i18n?: OpenPagesI18n
+    /**
+     * Extra CSS injected into the renderer Shadow DOM after package chrome
+     * (used when the renderer is mounted standalone, not under the editor).
+     */
+    shadowStyles?: string | string[]
   }>(),
   {
     snapEnabled: true,
     showHidden: false,
     fonts: () => BUILTIN_FONTS,
+    shadowStyles: () => [],
   },
 )
 
@@ -568,16 +575,27 @@ async function beginTextEdit(section: Section) {
   if (section.locked || (section.type !== 'text' && section.type !== 'headline')) return
   if (isEditing(section)) return
   editingSectionId.value = section.id
-  textEditMode.value = 'wysiwyg'
-  const content = sanitizeTextHtml(section.content)
+  const forceSource = section.type === 'text' && section.htmlMode
+  textEditMode.value = forceSource ? 'source' : 'wysiwyg'
+  const content = forceSource
+    ? sanitizePanelHtml(section.content)
+    : sanitizeTextHtml(section.content)
   section.content = content
   editCaretOffset.value = plainTextLength(content)
   editAnchorOffset.value = editCaretOffset.value
   emit('editingChange', true)
   document.addEventListener('selectionchange', onDocumentSelectionChange)
   await nextTick()
-  syncCeFromModel()
-  getEditEl()?.focus()
+  if (textEditMode.value === 'source') {
+    const ta = getSourceEl()
+    if (ta) {
+      ta.value = section.content
+      ta.focus()
+    }
+  } else {
+    syncCeFromModel()
+    getEditEl()?.focus()
+  }
 }
 
 function endTextEdit() {
@@ -628,6 +646,8 @@ function onSourceInput() {
 }
 
 async function toggleTextEditMode() {
+  const section = textChromeSection.value
+  if (section?.type === 'text' && section.htmlMode) return
   if (textEditMode.value === 'source') commitSourceSanitize()
   else syncEditContent()
   textEditMode.value = textEditMode.value === 'wysiwyg' ? 'source' : 'wysiwyg'
@@ -639,13 +659,40 @@ async function toggleTextEditMode() {
       ta.focus()
     }
   } else {
-    const section = textChromeSection.value
-    if (section) {
-      editCaretOffset.value = plainTextLength(section.content)
+    const current = textChromeSection.value
+    if (current) {
+      editCaretOffset.value = plainTextLength(current.content)
       editAnchorOffset.value = editCaretOffset.value
     }
     syncCeFromModel()
     getEditEl()?.focus()
+  }
+}
+
+async function toggleHtmlMode() {
+  const section = textChromeSection.value
+  if (!section || section.type !== 'text') return
+  const enabling = !section.htmlMode
+  if (enabling) {
+    if (textEditMode.value === 'wysiwyg') syncEditContent()
+    section.content = sanitizePanelHtml(section.content)
+    textEditMode.value = 'source'
+    section.htmlMode = true
+  } else {
+    if (textEditMode.value === 'source') {
+      const ta = getSourceEl()
+      if (ta) section.content = ta.value
+    }
+    section.htmlMode = false
+    section.content = sanitizeTextHtml(section.content)
+    textEditMode.value = 'source'
+  }
+  emit('change')
+  await nextTick()
+  const ta = getSourceEl()
+  if (ta) {
+    ta.value = section.content
+    ta.focus()
   }
 }
 
@@ -1035,7 +1082,8 @@ function commitSourceSanitize() {
   if (!section) return
   const ta = getSourceEl()
   const raw = ta?.value ?? section.content
-  const cleaned = sanitizeTextHtml(raw)
+  const cleaned =
+    section.type === 'text' && section.htmlMode ? sanitizePanelHtml(raw) : sanitizeTextHtml(raw)
   section.content = cleaned
   if (ta && ta.value !== cleaned) ta.value = cleaned
   emit('change')
@@ -1583,6 +1631,7 @@ function layoutLines(section: Section): { lines: LaidOutLine[]; fontSize: number
 const lineLayouts = computed(() => {
   const map = new Map<string, { lines: LaidOutLine[]; fontSize: number }>()
   for (const section of visibleSections.value) {
+    if (section.type === 'text' && section.htmlMode) continue
     if (section.type === 'text' || section.type === 'headline') {
       map.set(section.id, layoutLines(section))
     }
@@ -1706,7 +1755,13 @@ function runBoxStyle(run: {
 
 function textOf(section: Section): string {
   if (section.type !== 'text' && section.type !== 'headline') return ''
-  return sanitizeTextHtml(resolveTemplate(section.content, data.value))
+  const resolved = resolveTemplate(section.content, data.value)
+  if (section.type === 'text' && section.htmlMode) return sanitizePanelHtml(resolved)
+  return sanitizeTextHtml(resolved)
+}
+
+function isHtmlModeText(section: Section): section is Extract<Section, { type: 'text' }> {
+  return section.type === 'text' && section.htmlMode === true
 }
 
 function imageSrc(section: Section): string {
@@ -1721,7 +1776,7 @@ function imageAlt(section: Section): string {
 </script>
 
 <template>
-  <OpShadowRoot>
+  <OpShadowRoot :extra-styles="shadowStyles">
   <div
     ref="rendererRoot"
     class="op-renderer"
@@ -1763,6 +1818,12 @@ function imageAlt(section: Section): string {
             data-op-text-source
             @pointerdown.stop
             @input="onSourceInput"
+          />
+          <div
+            v-else-if="isHtmlModeText(section)"
+            class="op-section-html"
+            data-op-html
+            v-html="textOf(section)"
           />
           <template v-else>
             <div
@@ -1890,6 +1951,11 @@ function imageAlt(section: Section): string {
         @pointerdown.stop
         @click.stop
       >
+        <div
+          v-if="!(textChromeSection.type === 'text' && textChromeSection.htmlMode)"
+          class="op-text-chrome-layout"
+          data-op-text-chrome-layout
+        >
         <select
           :value="chromeSelectedFontId()"
           :aria-label="i18n.t('chrome.fontFamily')"
@@ -1993,6 +2059,18 @@ function imageAlt(section: Section): string {
         >
           <TextInitial v-if="textEditMode === 'source'" class="op-chrome-icon" :size="14" :stroke-width="2" aria-hidden="true" />
           <CodeXml v-else class="op-chrome-icon" :size="14" :stroke-width="2" aria-hidden="true" />
+        </button>
+        </div>
+        <button
+          v-if="textChromeSection.type === 'text'"
+          type="button"
+          class="op-chrome-btn"
+          data-op-chrome-html-mode
+          :title="i18n.t('chrome.htmlMode')"
+          :aria-pressed="textChromeSection.htmlMode === true"
+          @click="toggleHtmlMode"
+        >
+          <FileCode2 class="op-chrome-icon" :size="14" :stroke-width="2" aria-hidden="true" />
         </button>
         <span class="op-chrome-grow" aria-hidden="true" />
         <button

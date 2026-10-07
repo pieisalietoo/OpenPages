@@ -136,6 +136,7 @@ export {
   resizeSection,
   resolveTemplate,
   runaroundZonesForHost,
+  sanitizePanelHtml,
   sanitizeTextHtml,
   sectionActsAsRunaround,
   selectSection,

@@ -1,5 +1,5 @@
 import { DEFAULT_WRAP_OFFSET } from './runaround'
-import { sanitizeTextHtml } from './sanitize-html'
+import { sanitizePanelHtml, sanitizeTextHtml } from './sanitize-html'
 import type { TextFitMode } from './text-layout/fit'
 
 export type SectionType = 'text' | 'headline' | 'image' | 'panel' | 'runaround'
@@ -29,6 +29,8 @@ export interface SectionBase {
 export interface TextSection extends SectionBase {
   type: 'text'
   content: string
+  /** When true, content is rendered as pure HTML (no line-box engine); edit is source-only. */
+  htmlMode: boolean
   fontFamily: string
   fontSize: number
   fontBold: boolean
@@ -84,6 +86,7 @@ export interface AddTextSectionInput {
   width: number
   height: number
   content: string
+  htmlMode?: boolean
 }
 
 export interface AddHeadlineSectionInput {
@@ -127,6 +130,7 @@ export type AddSectionOptions = {
   width?: number
   height?: number
   content?: string
+  htmlMode?: boolean
   src?: string
   alt?: string
   fit?: ImageFit
@@ -169,6 +173,7 @@ export function addSectionToPage(
         width,
         height,
         content: options.content ?? defaults.content ?? 'New text',
+        htmlMode: options.htmlMode === true,
       })
     case 'headline':
       return addHeadlineSection(page, {
@@ -260,6 +265,7 @@ export function addTextSection(
   page: { sections: Section[] },
   input: AddTextSectionInput,
 ): TextSection {
+  const htmlMode = input.htmlMode === true
   const section: TextSection = {
     id: newId('sec'),
     type: 'text',
@@ -267,7 +273,8 @@ export function addTextSection(
     y: input.y,
     width: input.width,
     height: input.height,
-    content: sanitizeTextHtml(input.content),
+    content: htmlMode ? sanitizePanelHtml(input.content) : sanitizeTextHtml(input.content),
+    htmlMode,
     ...defaultChrome(),
     ...DEFAULT_TEXT_STYLE,
   }
@@ -385,6 +392,7 @@ export function duplicateSection(
         width: original.width,
         height: original.height,
         content: original.content,
+        htmlMode: original.htmlMode,
       })
       break
     case 'headline':
@@ -742,11 +750,14 @@ export function parseSection(value: unknown, index: number): Section {
   }
 
   switch (value.type) {
-    case 'text':
+    case 'text': {
+      const htmlMode = value.htmlMode === true
+      const rawContent = requireString(value, 'content', path)
       return {
         ...base,
         type: 'text',
-        content: sanitizeTextHtml(requireString(value, 'content', path)),
+        content: htmlMode ? sanitizePanelHtml(rawContent) : sanitizeTextHtml(rawContent),
+        htmlMode,
         fontFamily:
           typeof value.fontFamily === 'string' ? value.fontFamily : DEFAULT_TEXT_STYLE.fontFamily,
         fontSize:
@@ -769,6 +780,7 @@ export function parseSection(value: unknown, index: number): Section {
         textAlign: parseTextAlign(value.textAlign),
         verticalAlign: parseVerticalAlign(value.verticalAlign),
       }
+    }
     case 'headline':
       return {
         ...base,

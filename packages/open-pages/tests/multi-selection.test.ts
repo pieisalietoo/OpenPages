@@ -40,6 +40,7 @@ describe('visible selection tools', () => {
       width: 10,
       height: 10,
       content: id,
+      htmlMode: false,
       locked: false,
       hidden: false,
       runaround: false,

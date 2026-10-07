@@ -74,7 +74,7 @@ export {
   runaroundZonesForHost,
   sectionActsAsRunaround,
 } from './runaround'
-export { sanitizeTextHtml } from './sanitize-html'
+export { sanitizePanelHtml, sanitizeTextHtml } from './sanitize-html'
 export type {
   AddHeadlineSectionInput,
   AddImageSectionInput,

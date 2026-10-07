@@ -4,6 +4,7 @@ export type BuiltinToolId =
   | 'layout.select'
   | 'layout.save'
   | 'layout.exportJson'
+  | 'layout.importJson'
   | 'fonts.manage'
   | 'page.setup'
   | 'section.add'
@@ -66,6 +67,7 @@ export const BUILTIN_TOOLS: ReadonlyArray<Omit<ToolDefinition, 'enabled'>> = [
   { id: 'layout.select', scope: 'document', label: 'Layouts', icon: 'layout-template' },
   { id: 'layout.save', scope: 'document', label: 'Save layout', icon: 'save' },
   { id: 'layout.exportJson', scope: 'document', label: 'Export JSON', icon: 'braces' },
+  { id: 'layout.importJson', scope: 'document', label: 'Import JSON', icon: 'file-up' },
   { id: 'fonts.manage', scope: 'document', label: 'Fonts', icon: 'book-type' },
   { id: 'export.print', scope: 'document', label: 'Print', icon: 'printer' },
   { id: 'export.png', scope: 'document', label: 'Export PNG', icon: 'image' },

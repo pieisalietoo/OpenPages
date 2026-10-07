@@ -943,6 +943,15 @@
   white-space: pre-wrap;
 }
 
+.op-section-html {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  color: inherit;
+  font: inherit;
+}
+
 .op-chrome-btn {
   min-width: 1.6rem;
   padding: 0.15rem 0.35rem;

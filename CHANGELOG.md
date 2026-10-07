@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-10-07
+
+### Added
+
+- Text section **HTML mode** (`htmlMode`): render content as sanitized panel HTML (no line-box engine); source-only editing with a chrome toggle.
+- Host `shadowStyles` prop on editor/renderer to inject extra CSS into the OpenPages Shadow DOM after package chrome.
+- **Import layout JSON** toolbar tool (`layout.importJson`): name + `.json` file, with overwrite confirm and `beforeLayoutSave` hook support.
+- Root `pnpm dev` runs the library watch build (`vite build --watch` → `dist/`) for linked host apps.
+
+### Changed
+
+- README: document that `link:` / published installs resolve `dist/`, so linked hosts need OpenPages `pnpm dev` (or a Vite alias to `src/`).
+
 ## [0.4.0] - 2026-10-05
 
 ### Added
@@ -68,6 +81,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Host chrome: fonts catalog, i18n (`en` / `it`), layout library, export hooks (print / PNG / PDF).
 - Published `dist` build: ESM bundle, compiled CSS, and TypeScript declarations.
 
+[0.5.0]: https://github.com/pieisalietoo/OpenPages/releases/tag/v0.5.0
 [0.4.0]: https://github.com/pieisalietoo/OpenPages/releases/tag/v0.4.0
 [0.3.0]: https://github.com/pieisalietoo/OpenPages/releases/tag/v0.3.0
 [0.2.1]: https://github.com/pieisalietoo/OpenPages/releases/tag/v0.2.1

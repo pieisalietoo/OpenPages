@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { describe, expect, it, vi } from 'vitest'
 import { defineComponent, h } from 'vue'
 import OpenPagesEditor from '../src/components/OpenPagesEditor.vue'
@@ -469,6 +469,55 @@ describe('OpenPagesEditor chrome', () => {
     })
     expect(wrapper.props('modelValue').pages[0]?.sections).toHaveLength(1)
     expect(wrapper.emitted('update:modelValue')).toBeTruthy()
+    wrapper.unmount()
+  })
+
+  it('imports a layout from JSON via name + file in the import popover', async () => {
+    const blank = createDocument({ title: 'Blank' })
+    const imported = createDocument({ title: 'FromFile' })
+    const importedPage = imported.pages[0]
+    expect(importedPage).toBeTruthy()
+    if (!importedPage) return
+    addTextSection(importedPage, { x: 10, y: 20, width: 100, height: 40, content: 'Hi' })
+    const layouts = createLayoutLibrary({
+      layouts: [{ name: 'Blank', document: blank }],
+      activeName: 'Blank',
+    })
+    const wrapper = mount(OpenPagesEditor, {
+      props: {
+        modelValue: blank,
+        layoutLibrary: layouts,
+        'onUpdate:modelValue': (value: typeof blank) => {
+          void wrapper.setProps({ modelValue: value })
+        },
+      },
+    })
+
+    expect(wrapper.find('[data-op-tool="layout.importJson"]').exists()).toBe(true)
+    await wrapper.get('[data-op-tool="layout.importJson"]').trigger('click')
+    expect(wrapper.find('[data-op-popover="layout.importJson"]').exists()).toBe(true)
+
+    await wrapper.get('[data-op-import-name]').setValue('Imported')
+    const fileInput = wrapper.get('[data-op-import-file]').element as HTMLInputElement
+    const file = new File([serializeDocument(imported)], 'layout.json', {
+      type: 'application/json',
+    })
+    Object.defineProperty(fileInput, 'files', {
+      configurable: true,
+      value: {
+        0: file,
+        length: 1,
+        item: (i: number) => (i === 0 ? file : null),
+      },
+    })
+    await wrapper.get('[data-op-import-file]').trigger('change')
+    await wrapper.get('[data-op-popover="layout.importJson"] form').trigger('submit')
+    await flushPromises()
+
+    expect(layouts.list().map((l) => l.name)).toEqual(['Blank', 'Imported'])
+    expect(layouts.getActive()?.name).toBe('Imported')
+    expect(wrapper.props('modelValue').meta.title).toBe('FromFile')
+    expect(wrapper.props('modelValue').pages[0]?.sections).toHaveLength(1)
     wrapper.unmount()
   })
 })

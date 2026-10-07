@@ -9,6 +9,7 @@
     "typecheck": "pnpm -r --filter @openpages/vue --filter @openpages/demo typecheck",
     "test": "pnpm --filter @openpages/vue test",
     "build": "pnpm --filter @openpages/vue build",
+    "dev": "pnpm --filter @openpages/vue dev",
     "demo": "pnpm --filter @openpages/demo dev"
   },
   "devDependencies": {

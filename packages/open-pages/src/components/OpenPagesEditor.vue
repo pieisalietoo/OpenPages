@@ -185,6 +185,11 @@ const props = withDefaults(
      * (built-ins + host keys). Merged into the toolbar icon map; host keys win.
      */
     toolbarIcons?: ToolbarIconMap
+    /**
+     * Extra CSS injected into the editor Shadow DOM after package chrome
+     * (string or list of stylesheet texts).
+     */
+    shadowStyles?: string | string[]
   }>(),
   {
     toolEnabled: () => ({}),
@@ -193,6 +198,7 @@ const props = withDefaults(
     locale: 'en',
     extraDocumentTools: () => [],
     toolbarIcons: () => ({}),
+    shadowStyles: () => [],
   },
 )
 
@@ -224,6 +230,11 @@ const selection = reactive(createSelection())
 const openPopoverId = ref<ToolId | null>(null)
 const saveName = ref('')
 const saveError = ref<string | null>(null)
+const importName = ref('')
+const importError = ref<string | null>(null)
+const importFileInput = ref<HTMLInputElement | null>(null)
+const importFile = ref<File | null>(null)
+const pendingImportDoc = ref<OpenPagesDocument | null>(null)
 const pageEl = ref<HTMLElement | null>(null)
 const layoutEpoch = ref(0)
 const fontEpoch = ref(0)
@@ -610,8 +621,11 @@ function togglePopover(id: ToolId) {
   }
   if (next === 'layout.save') {
     prepareLayoutSaveForm()
+  } else if (next === 'layout.importJson') {
+    prepareLayoutImportForm()
   } else {
     pendingOverwrite.value = null
+    pendingImportDoc.value = null
   }
 }
 
@@ -620,8 +634,33 @@ function prepareLayoutSaveForm() {
   saveName.value = active && !active.locked ? active.name : ''
   saveError.value = null
   pendingOverwrite.value = null
+  pendingImportDoc.value = null
 }
 
+function prepareLayoutImportForm() {
+  importName.value = ''
+  importError.value = null
+  importFile.value = null
+  pendingOverwrite.value = null
+  pendingImportDoc.value = null
+  if (importFileInput.value) importFileInput.value.value = ''
+}
+
+function onImportFileChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  importFile.value = input.files?.[0] ?? null
+  importError.value = null
+}
+
+async function readImportFileText(file: File): Promise<string> {
+  if (typeof file.text === 'function') return file.text()
+  return await new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result ?? ''))
+    reader.onerror = () => reject(reader.error ?? new Error('read failed'))
+    reader.readAsText(file)
+  })
+}
 function downloadDataUrl(dataUrl: string, filename: string) {
   const anchor = document.createElement('a')
   anchor.href = dataUrl
@@ -719,6 +758,7 @@ function activateTool(id: ToolId, payload?: unknown) {
     id === 'layout.select' ||
     id === 'layout.save' ||
     id === 'layout.exportJson' ||
+    id === 'layout.importJson' ||
     id === 'fonts.manage' ||
     id === 'page.setup' ||
     id === 'section.add' ||
@@ -1022,12 +1062,76 @@ async function saveCurrentLayout(options: { confirmedOverwrite?: boolean } = {})
   openPopoverId.value = null
 }
 
+async function importLayoutJson(options: { confirmedOverwrite?: boolean } = {}) {
+  const name = importName.value.trim()
+  const file = importFile.value ?? importFileInput.value?.files?.[0] ?? null
+  if (!name || (!file && !pendingImportDoc.value)) {
+    importError.value = i18n.t('editor.importJsonMissing')
+    return
+  }
+  importError.value = null
+
+  let doc = pendingImportDoc.value
+  if (!doc) {
+    if (!file) {
+      importError.value = i18n.t('editor.importJsonMissing')
+      return
+    }
+    try {
+      const text = await readImportFileText(file)
+      doc = parseDocument(text)
+    } catch {
+      importError.value = i18n.t('editor.importJsonInvalid')
+      return
+    }
+  }
+
+  const existing = layouts.list().find((layout) => layout.name === name)
+  if (existing?.locked) {
+    importError.value = i18n.t('editor.layoutLocked')
+    return
+  }
+  const overwriting = Boolean(existing)
+  if (overwriting && !options.confirmedOverwrite) {
+    pendingImportDoc.value = doc
+    pendingOverwrite.value = name
+    return
+  }
+
+  if (props.beforeLayoutSave) {
+    const allowed = await props.beforeLayoutSave({
+      name,
+      document: doc,
+      exists: overwriting,
+    })
+    if (!allowed) return
+  }
+
+  const saved = layouts.save(name, doc)
+  if (!saved) {
+    importError.value = i18n.t('editor.layoutLocked')
+    return
+  }
+  tools.activate('layout.importJson', { name })
+  pendingImportDoc.value = null
+  pendingOverwrite.value = null
+  importName.value = ''
+  importFile.value = null
+  if (importFileInput.value) importFileInput.value.value = ''
+  selectLayout(name)
+}
+
 function confirmOverwriteLayout() {
+  if (pendingImportDoc.value) {
+    void importLayoutJson({ confirmedOverwrite: true })
+    return
+  }
   void saveCurrentLayout({ confirmedOverwrite: true })
 }
 
 function cancelOverwriteLayout() {
   pendingOverwrite.value = null
+  pendingImportDoc.value = null
 }
 
 function setToolEnabled(id: ToolId, enabled: boolean) {
@@ -1045,7 +1149,7 @@ defineExpose({
 </script>
 
 <template>
-  <OpShadowRoot>
+  <OpShadowRoot :extra-styles="shadowStyles">
   <div class="op-editor" data-op-editor>
     <OpenPagesToolbar
       v-if="documentToolbarEntries"
@@ -1182,6 +1286,63 @@ defineExpose({
             Download file
           </button>
         </div>
+      </template>
+      <template #popover-layout-importJson>
+        <p class="op-popover-title">{{ i18n.t('editor.importJson') }}</p>
+        <div
+          v-if="pendingOverwrite && pendingImportDoc"
+          class="op-delete-confirm"
+          data-op-overwrite-confirm
+          role="alertdialog"
+        >
+          <p class="op-delete-confirm-msg">
+            {{ i18n.t('editor.confirmOverwriteLayout', { name: pendingOverwrite }) }}
+          </p>
+          <div class="op-delete-confirm-actions">
+            <button
+              type="button"
+              class="op-save-btn"
+              data-op-overwrite-confirm-yes
+              @click="confirmOverwriteLayout"
+            >
+              {{ i18n.t('editor.confirmOverwriteYes') }}
+            </button>
+            <button
+              type="button"
+              class="op-btn-secondary"
+              data-op-overwrite-confirm-no
+              @click="cancelOverwriteLayout"
+            >
+              {{ i18n.t('editor.confirmNo') }}
+            </button>
+          </div>
+        </div>
+        <form v-else class="op-save-form" @submit.prevent="importLayoutJson()">
+          <input
+            v-model="importName"
+            class="op-save-input"
+            type="text"
+            data-op-import-name
+            :placeholder="i18n.t('editor.layoutName')"
+            :aria-label="i18n.t('editor.layoutName')"
+            @input="importError = null"
+          />
+          <label class="op-field">
+            {{ i18n.t('editor.importJsonFile') }}
+            <input
+              ref="importFileInput"
+              class="op-save-input"
+              type="file"
+              accept="application/json,.json"
+              data-op-import-file
+              @change="onImportFileChange"
+            />
+          </label>
+          <button type="submit" class="op-save-btn" data-op-import-submit>
+            {{ i18n.t('editor.importJsonSubmit') }}
+          </button>
+        </form>
+        <p v-if="importError" class="op-save-error" data-op-import-error>{{ importError }}</p>
       </template>
       <template #popover-fonts-manage>
         <p class="op-popover-title">{{ i18n.t('editor.manageFonts') }}</p>

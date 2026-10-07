@@ -23,7 +23,7 @@ pnpm add @openpages/vue @lucide/vue vue
 
 Until a release is published, depend on a git checkout or a local path (see [Link a host app to local sources](#link-a-host-app-to-local-sources)).
 
-Published installs resolve the compiled `dist/` build (`open-pages.js`, `open-pages.css`, and `.d.ts`). Local `pnpm demo` still aliases to package sources for HMR.
+Published installs resolve the compiled `dist/` build (`open-pages.js`, `open-pages.css`, and TypeScript declarations). The in-repo demo aliases to package **sources** for HMR (`pnpm demo`). Linked host apps resolve `dist/` — keep a watch build running (see below).
 
 ### Minimal editor
 
@@ -91,21 +91,22 @@ pnpm install
 ### Common commands
 
 ```bash
-pnpm demo          # playground
+pnpm demo          # playground (sources + HMR) → http://localhost:5180
+pnpm dev           # library watch rebuild → packages/open-pages/dist
 pnpm test          # Vitest (@openpages/vue)
 pnpm typecheck     # vue-tsc for library + demo
 pnpm lint          # Biome
-pnpm build         # library build
+pnpm build         # one-shot library build
 pnpm gatekeeper    # lint + typecheck + test (full local gate)
 ```
 
-Package-scoped scripts also work from `packages/open-pages` (`pnpm test`, `pnpm test:watch`, …).
+Package-scoped scripts also work from `packages/open-pages` (`pnpm test`, `pnpm test:watch`, `pnpm dev`, …).
 
-### Link a host app to local sources
+### Link a host app to local OpenPages
 
-`@openpages/vue` currently exposes TypeScript / `.vue` sources directly (no publish step required for day-to-day host work). Point your other app at the local package so edits in OpenPages hot-reload into the host without bumping versions.
+`@openpages/vue` publishes **`dist/`** (see `exports` in `packages/open-pages/package.json`). A `link:` / `file:` dependency therefore loads the built bundle, not the `.vue` sources — edits under `src/` appear in the host only after a rebuild.
 
-#### Option A — pnpm `link:` (recommended)
+#### Option A — pnpm `link:` + library watch (recommended)
 
 In the **host** app `package.json`:
 
@@ -117,19 +118,27 @@ In the **host** app `package.json`:
 }
 ```
 
-Adjust the relative path to wherever you cloned OpenPages. Then:
+Adjust the relative path to wherever you cloned OpenPages. Then use **two terminals**:
 
 ```bash
-# in the host app
+# terminal 1 — OpenPages monorepo (rebuilds dist on every change)
+cd ../OpenPages
+pnpm install
+pnpm dev
+
+# terminal 2 — host app
+cd ../YourHostApp
 pnpm install
 pnpm dev
 ```
 
-Keep the OpenPages repo open in another editor/window; save files under `packages/open-pages/src` and the host Vite server should pick them up.
+`pnpm dev` in OpenPages runs `vite build --watch` for `@openpages/vue`. Leave it running while you edit `packages/open-pages/src`; the host Vite server should pick up the updated `dist/` files (hard-refresh the host if needed).
 
-#### Option B — Vite alias (no package manager link)
+Also install peers in the host if they are not already present: `vue` and `@lucide/vue`.
 
-Keep a normal dependency entry (or omit it) and force resolution in the **host** `vite.config.ts`:
+#### Option B — Vite alias to sources (no watch build)
+
+Keep a normal dependency entry (or omit it) and force resolution in the **host** `vite.config.ts` to the package **`src/`** directory. Then host HMR compiles OpenPages SFCs directly — no `pnpm dev` watch in the OpenPages repo:
 
 ```ts
 import path from 'node:path'
@@ -146,7 +155,7 @@ export default defineConfig({
   plugins: [vue()],
   resolve: {
     alias: {
-      // Point at the package `src/` directory (not `index.ts`).
+      // Point at the package `src/` directory (not `index.ts` / not `dist`).
       '@openpages/vue': path.join(openPagesRoot, 'src'),
     },
     // Critical: one Vue copy shared by host + OpenPages
@@ -166,9 +175,9 @@ export default defineConfig({
 #### Vue checklist for linked hosts
 
 1. **Single Vue instance** — use `resolve.dedupe: ['vue']` (and avoid nested `node_modules/vue` inside the linked package when possible). Duplicate Vue causes “invalid vnode” / broken reactivity.
-2. **Compile SFCs** — host must run `@vitejs/plugin-vue` so `.vue` files under OpenPages compile.
-3. **Styles** — no host stylesheet import: OpenPages injects CSS into its Shadow DOM.
-4. **Two terminals** — run the host `dev` server and edit OpenPages sources; no `pnpm build` / version bump of `@openpages/vue` is required for this workflow.
+2. **Compile SFCs** — required for Option B (`@vitejs/plugin-vue`). Option A serves prebuilt JS from `dist/`.
+3. **Styles** — do not import `@openpages/vue/style.css` in the host; OpenPages injects CSS into its Shadow DOM. Optional host CSS: `shadowStyles` prop.
+4. **Two terminals (Option A)** — OpenPages `pnpm dev` (watch → `dist`) + host `pnpm dev`. Option B needs only the host `dev` server.
 
 When you are ready to ship the host against a fixed OpenPages revision, switch the dependency back to a published version, a git tag, or a path commit — and remove the alias / `link:` override.
 
