@@ -84,6 +84,24 @@ export function serializeDocument(doc: OpenPagesDocument): string {
   return JSON.stringify(doc)
 }
 
+/**
+ * Layout template JSON for export: keeps {{tokens}} and geometry, clears bound
+ * `data` / `assets`, and strips embedded `data:` image payloads. Does not mutate `doc`.
+ */
+export function serializeLayoutSource(doc: OpenPagesDocument): string {
+  const clone = parseDocument(serializeDocument(doc))
+  clone.data = {}
+  clone.assets = []
+  for (const page of clone.pages) {
+    for (const section of page.sections) {
+      if (section.type === 'image' && /^data:/i.test(section.src)) {
+        section.src = ''
+      }
+    }
+  }
+  return JSON.stringify(clone)
+}
+
 export function migrateDocument(doc: OpenPagesDocument): OpenPagesDocument {
   if (doc.schemaVersion >= CURRENT_SCHEMA_VERSION) return doc
 

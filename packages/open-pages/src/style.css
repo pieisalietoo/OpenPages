@@ -14,12 +14,18 @@
   display: flex;
   justify-content: center;
   padding: 1.5rem;
+  overflow: visible;
 }
 
 .op-page {
   position: relative;
   background: var(--op-page-bg);
   box-shadow: 0 1px 4px rgb(0 0 0 / 12%);
+  /* Visible so selection/text chrome + tool popovers can sit outside page bounds. */
+  overflow: visible;
+}
+
+.op-page.op-exporting {
   overflow: hidden;
 }
 

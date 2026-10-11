@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-10-11
+
+### Added
+
+- Runaround selection menu with enable toggle and per-side margins (left / right / above / below; negatives allowed) so wrap exclusions inflate from the section box.
+- `serializeLayoutSource` and layout JSON export that keep `{{tokens}}` while clearing bound `data`, `assets`, and embedded `data:` image payloads.
+
+### Changed
+
+- Runaround toolbar control opens a popover instead of toggling immediately; the button stays pressed while runaround is on.
+
+### Fixed
+
+- Selection and text chrome (and their menus) can render outside page bounds while editing; export still clips the page.
+- Toolbar and page-add menus close on outside click / focus loss, and when Escape is pressed.
+- Delete key removes the selected section(s).
+
 ## [0.5.0] - 2026-10-07
 
 ### Added
@@ -81,6 +98,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Host chrome: fonts catalog, i18n (`en` / `it`), layout library, export hooks (print / PNG / PDF).
 - Published `dist` build: ESM bundle, compiled CSS, and TypeScript declarations.
 
+[0.6.0]: https://github.com/pieisalietoo/OpenPages/releases/tag/v0.6.0
 [0.5.0]: https://github.com/pieisalietoo/OpenPages/releases/tag/v0.5.0
 [0.4.0]: https://github.com/pieisalietoo/OpenPages/releases/tag/v0.4.0
 [0.3.0]: https://github.com/pieisalietoo/OpenPages/releases/tag/v0.3.0

@@ -186,6 +186,7 @@ const popoverTools = new Set<ToolId>([
   'section.style',
   'section.font',
   'section.columns',
+  'section.runaround',
 ])
 
 const toggleTools = new Set<ToolId>([

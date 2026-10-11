@@ -15,6 +15,7 @@ export {
   migrateDocument,
   parseDocument,
   serializeDocument,
+  serializeLayoutSource,
 } from './document'
 export { createFeatureDemoDocument } from './feature-demo'
 export type {
@@ -64,11 +65,14 @@ export { addBlankPage, deletePage, duplicatePage, movePage } from './pages'
 export type {
   Rect as RunaroundRect,
   RelativeExclusion,
+  RunaroundMargins,
   RunaroundZoneRect,
 } from './runaround'
 export {
+  DEFAULT_RUNAROUND_MARGINS,
   DEFAULT_WRAP_OFFSET,
   inflateRect,
+  inflateRectByMargins,
   intersectRects,
   relativeExclusionsForHost,
   runaroundZonesForHost,
@@ -121,6 +125,7 @@ export {
   setSectionHidden,
   setSectionLocked,
   setSectionRunaround,
+  setSectionRunaroundMargins,
   ungroupSections,
   updateSectionStyle,
   updateTextStyle,

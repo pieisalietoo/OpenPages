@@ -9,9 +9,25 @@ export interface Rect {
   height: number
 }
 
+/** Extra space around a section’s box when it acts as a runaround (px; may be negative). */
+export interface RunaroundMargins {
+  left: number
+  right: number
+  top: number
+  bottom: number
+}
+
+export const DEFAULT_RUNAROUND_MARGINS: RunaroundMargins = {
+  left: 0,
+  right: 0,
+  top: 0,
+  bottom: 0,
+}
+
 export interface RunaroundZoneRect extends Rect {
   id: string
   wrapOffset?: number
+  margins?: RunaroundMargins
   hidden?: boolean
 }
 
@@ -32,6 +48,15 @@ export function inflateRect(rect: Rect, pad: number): Rect {
   }
 }
 
+export function inflateRectByMargins(rect: Rect, margins: RunaroundMargins): Rect {
+  return {
+    x: rect.x - margins.left,
+    y: rect.y - margins.top,
+    width: rect.width + margins.left + margins.right,
+    height: rect.height + margins.top + margins.bottom,
+  }
+}
+
 export function intersectRects(a: Rect, b: Rect): Rect | null {
   const left = Math.max(a.x, b.x)
   const top = Math.max(a.y, b.y)
@@ -49,8 +74,10 @@ export function relativeExclusionsForHost(
   const result: RelativeExclusion[] = []
   for (const zone of zones) {
     if (zone.hidden) continue
-    const pad = zone.wrapOffset ?? DEFAULT_WRAP_OFFSET
-    const hit = intersectRects(host, inflateRect(zone, pad))
+    const expanded = zone.margins
+      ? inflateRectByMargins(zone, zone.margins)
+      : inflateRect(zone, zone.wrapOffset ?? DEFAULT_WRAP_OFFSET)
+    const hit = intersectRects(host, expanded)
     if (!hit || hit.width < 1 || hit.height < 1) continue
     result.push({
       id: zone.id,
@@ -73,6 +100,7 @@ type RunaroundSource = {
   hidden?: boolean
   runaround?: boolean
   wrapOffset?: number
+  runaroundMargins?: RunaroundMargins
 }
 
 export function sectionActsAsRunaround(section: RunaroundSource): boolean {
@@ -86,16 +114,25 @@ export function runaroundZonesForHost(
 ): RunaroundZoneRect[] {
   return sections
     .filter((section) => section.id !== hostId && sectionActsAsRunaround(section))
-    .map((section) => ({
-      id: section.id,
-      x: section.x,
-      y: section.y,
-      width: section.width,
-      height: section.height,
-      hidden: section.hidden,
-      wrapOffset:
-        section.type === 'runaround' && typeof section.wrapOffset === 'number'
-          ? section.wrapOffset
-          : DEFAULT_WRAP_OFFSET,
-    }))
+    .map((section) => {
+      const base = {
+        id: section.id,
+        x: section.x,
+        y: section.y,
+        width: section.width,
+        height: section.height,
+        hidden: section.hidden,
+      }
+      if (section.type === 'runaround') {
+        return {
+          ...base,
+          wrapOffset:
+            typeof section.wrapOffset === 'number' ? section.wrapOffset : DEFAULT_WRAP_OFFSET,
+        }
+      }
+      return {
+        ...base,
+        margins: section.runaroundMargins ?? { ...DEFAULT_RUNAROUND_MARGINS },
+      }
+    })
 }

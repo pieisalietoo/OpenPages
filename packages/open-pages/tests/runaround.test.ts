@@ -5,7 +5,9 @@ import OpenPagesEditor from '../src/components/OpenPagesEditor.vue'
 import OpenPagesRenderer from '../src/components/OpenPagesRenderer.vue'
 import { createDocument, parseDocument, serializeDocument } from '../src/model/document'
 import {
+  DEFAULT_RUNAROUND_MARGINS,
   DEFAULT_WRAP_OFFSET,
+  inflateRectByMargins,
   relativeExclusionsForHost,
   runaroundZonesForHost,
 } from '../src/model/runaround'
@@ -14,6 +16,8 @@ import {
   addRunaroundSection,
   addTextSection,
   duplicateSection,
+  setSectionRunaround,
+  setSectionRunaroundMargins,
 } from '../src/model/section'
 
 function firstPage(doc: ReturnType<typeof createDocument>) {
@@ -131,7 +135,88 @@ describe('runaround sections', () => {
     expect(page.sections.map((s) => s.type)).toEqual(['runaround'])
   })
 
-  it('toggles runaround on a panel so neighboring text wraps around it, not around itself', async () => {
+  it('inflates a rect by per-side runaround margins (negative allowed)', () => {
+    expect(
+      inflateRectByMargins(
+        { x: 100, y: 50, width: 80, height: 60 },
+        { left: 10, right: 5, top: 2, bottom: -4 },
+      ),
+    ).toEqual({ x: 90, y: 48, width: 95, height: 58 })
+  })
+
+  it('stores, duplicates, and round-trips runaround margins on a panel', () => {
+    const doc = createDocument({ title: 'Margins' })
+    const page = firstPage(doc)
+    const panel = addPanelSection(page, {
+      x: 10,
+      y: 20,
+      width: 40,
+      height: 30,
+      borderStyle: 'ink',
+    })
+    expect(panel.runaroundMargins).toEqual(DEFAULT_RUNAROUND_MARGINS)
+
+    expect(
+      setSectionRunaroundMargins(page, panel.id, {
+        left: 12,
+        right: -3,
+        top: 4,
+        bottom: 8,
+      }),
+    ).toBe(true)
+    expect(panel.runaroundMargins).toEqual({ left: 12, right: -3, top: 4, bottom: 8 })
+
+    setSectionRunaround(page, panel.id, true)
+    const copy = duplicateSection(page, panel.id)
+    expect(copy?.runaround).toBe(true)
+    expect(copy?.runaroundMargins).toEqual({ left: 12, right: -3, top: 4, bottom: 8 })
+
+    const parsed = parseDocument(serializeDocument(doc))
+    const restored = firstPage(parsed).sections[0]
+    expect(restored).toMatchObject({
+      type: 'panel',
+      runaround: true,
+      runaroundMargins: { left: 12, right: -3, top: 4, bottom: 8 },
+    })
+  })
+
+  it('applies panel runaround margins when building host exclusions', () => {
+    const zones = runaroundZonesForHost(
+      [
+        {
+          id: 'host',
+          type: 'text',
+          x: 0,
+          y: 0,
+          width: 400,
+          height: 400,
+          runaround: false,
+        },
+        {
+          id: 'panel',
+          type: 'panel',
+          x: 100,
+          y: 50,
+          width: 80,
+          height: 60,
+          runaround: true,
+          runaroundMargins: { left: 10, right: 5, top: 2, bottom: 4 },
+        },
+      ],
+      'host',
+    )
+    expect(zones).toHaveLength(1)
+    const exclusions = relativeExclusionsForHost({ x: 0, y: 0, width: 400, height: 400 }, zones)
+    expect(exclusions[0]).toEqual({
+      id: 'panel',
+      x: 90,
+      y: 48,
+      width: 95,
+      height: 66,
+    })
+  })
+
+  it('opens a runaround menu with toggle and margin inputs; button stays pressed when on', async () => {
     const doc = createDocument({ title: 'Toggle wrap' })
     const page = firstPage(doc)
     const text = addTextSection(page, {
@@ -157,19 +242,36 @@ describe('runaround sections', () => {
       clientX: 110,
       clientY: 50,
     })
-    expect(editor.find('[data-op-tool="section.runaround"]').exists()).toBe(true)
-    expect(editor.get('[data-op-tool="section.runaround"]').attributes('aria-pressed')).toBe(
-      'false',
-    )
-    await editor.get('[data-op-tool="section.runaround"]').trigger('click')
+    const tool = editor.get('[data-op-tool="section.runaround"]')
+    expect(tool.attributes('aria-pressed')).toBe('false')
+
+    await tool.trigger('click')
+    expect(panel.runaround).toBe(false)
+    expect(editor.find('[data-op-popover="section.runaround"]').exists()).toBe(true)
+    expect(editor.find('[data-op-runaround-toggle]').exists()).toBe(true)
+    for (const side of ['left', 'right', 'top', 'bottom'] as const) {
+      expect(editor.find(`[data-op-runaround-margin="${side}"]`).exists()).toBe(true)
+    }
+
+    await editor.get('[data-op-runaround-toggle]').setValue(true)
     expect(panel.runaround).toBe(true)
     expect(editor.get('[data-op-tool="section.runaround"]').attributes('aria-pressed')).toBe('true')
+
+    await editor.get('[data-op-runaround-margin="left"]').setValue('20')
+    await editor.get('[data-op-runaround-margin="left"]').trigger('change')
+    await editor.get('[data-op-runaround-margin="right"]').setValue('10')
+    await editor.get('[data-op-runaround-margin="right"]').trigger('change')
+    await editor.get('[data-op-runaround-margin="top"]').setValue('5')
+    await editor.get('[data-op-runaround-margin="top"]').trigger('change')
+    await editor.get('[data-op-runaround-margin="bottom"]').setValue('-8')
+    await editor.get('[data-op-runaround-margin="bottom"]').trigger('change')
+    expect(panel.runaroundMargins).toEqual({ left: 20, right: 10, top: 5, bottom: -8 })
     editor.unmount()
 
     const wrapper = mount(OpenPagesRenderer, {
       props: { document: doc, pageId: page.id },
     })
-    const hole = { x: 100, y: 40, width: 100, height: 80 }
+    const hole = { x: 80, y: 35, width: 130, height: 77 }
     const lines = wrapper.findAll('[data-op-line]')
     expect(lines.length).toBeGreaterThan(0)
     for (const line of lines) {
@@ -178,6 +280,7 @@ describe('runaround sections', () => {
       const top = Number(/top:\s*([\d.]+)px/.exec(style)?.[1] ?? NaN)
       const width = Number(/width:\s*([\d.]+)px/.exec(style)?.[1] ?? NaN)
       const height = Number(/height:\s*([\d.]+)px/.exec(style)?.[1] ?? NaN)
+      expect(Number.isFinite(left) && Number.isFinite(top)).toBe(true)
       expect(overlaps({ x: left, y: top, width, height }, hole)).toBe(false)
     }
     expect(wrapper.find(`[data-op-section="${text.id}"]`).exists()).toBe(true)

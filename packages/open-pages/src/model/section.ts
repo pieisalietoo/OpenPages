@@ -1,4 +1,4 @@
-import { DEFAULT_WRAP_OFFSET } from './runaround'
+import { DEFAULT_RUNAROUND_MARGINS, DEFAULT_WRAP_OFFSET, type RunaroundMargins } from './runaround'
 import { sanitizePanelHtml, sanitizeTextHtml } from './sanitize-html'
 import type { TextFitMode } from './text-layout/fit'
 
@@ -19,6 +19,8 @@ export interface SectionBase {
   hidden: boolean
   /** When true, this section excludes text of other frames (not its own). */
   runaround: boolean
+  /** Per-side inset/outset added to the section box when `runaround` is on. */
+  runaroundMargins: RunaroundMargins
   groupId: string | null
   backgroundColor: string
   color: string
@@ -256,6 +258,7 @@ function defaultChrome() {
     locked: false,
     hidden: false,
     runaround: false,
+    runaroundMargins: { ...DEFAULT_RUNAROUND_MARGINS },
     groupId: null as string | null,
     ...DEFAULT_SECTION_STYLE,
   }
@@ -436,6 +439,7 @@ export function duplicateSection(
   created.borderColor = original.borderColor
   created.borderWidth = original.borderWidth
   created.runaround = original.runaround
+  created.runaroundMargins = { ...original.runaroundMargins }
   if (
     (created.type === 'text' || created.type === 'headline') &&
     (original.type === 'text' || original.type === 'headline')
@@ -664,6 +668,27 @@ export function setSectionRunaround(
   return true
 }
 
+export function setSectionRunaroundMargins(
+  page: { sections: Section[] },
+  sectionId: string,
+  margins: Partial<RunaroundMargins>,
+): boolean {
+  const section = findSection(page, sectionId)
+  if (!section || section.type === 'runaround') {
+    return false
+  }
+  const next = { ...section.runaroundMargins }
+  if (typeof margins.left === 'number' && Number.isFinite(margins.left)) next.left = margins.left
+  if (typeof margins.right === 'number' && Number.isFinite(margins.right))
+    next.right = margins.right
+  if (typeof margins.top === 'number' && Number.isFinite(margins.top)) next.top = margins.top
+  if (typeof margins.bottom === 'number' && Number.isFinite(margins.bottom)) {
+    next.bottom = margins.bottom
+  }
+  section.runaroundMargins = next
+  return true
+}
+
 export function bringForward(page: { sections: Section[] }, sectionId: string): boolean {
   const index = page.sections.findIndex((section) => section.id === sectionId)
   if (index < 0 || index >= page.sections.length - 1) {
@@ -708,6 +733,22 @@ function requireString(record: Record<string, unknown>, key: string, path: strin
   return value
 }
 
+function parseRunaroundMargins(value: unknown): RunaroundMargins {
+  if (!isRecord(value)) {
+    return { ...DEFAULT_RUNAROUND_MARGINS }
+  }
+  const side = (key: keyof RunaroundMargins) => {
+    const n = value[key]
+    return typeof n === 'number' && Number.isFinite(n) ? n : DEFAULT_RUNAROUND_MARGINS[key]
+  }
+  return {
+    left: side('left'),
+    right: side('right'),
+    top: side('top'),
+    bottom: side('bottom'),
+  }
+}
+
 function parseTextAlign(value: unknown): TextAlign {
   if (value === 'center' || value === 'right' || value === 'justify' || value === 'stretch') {
     return value
@@ -735,6 +776,7 @@ export function parseSection(value: unknown, index: number): Section {
     locked: value.locked === true,
     hidden: value.hidden === true,
     runaround: value.runaround === true,
+    runaroundMargins: parseRunaroundMargins(value.runaroundMargins),
     groupId: typeof value.groupId === 'string' ? value.groupId : null,
     backgroundColor:
       typeof value.backgroundColor === 'string'

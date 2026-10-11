@@ -34,7 +34,12 @@ import {
 } from '../export/exporters'
 import { createI18n, type LocaleCode, type OpenPagesI18n } from '../i18n'
 import { OPEN_PAGES_I18N } from '../i18n/keys'
-import { type OpenPagesDocument, parseDocument, serializeDocument } from '../model/document'
+import {
+  type OpenPagesDocument,
+  parseDocument,
+  serializeDocument,
+  serializeLayoutSource,
+} from '../model/document'
 import {
   applyCatalogFontSelection,
   BUILTIN_FONTS,
@@ -65,6 +70,7 @@ import {
   setSectionHidden,
   setSectionLocked,
   setSectionRunaround,
+  setSectionRunaroundMargins,
   type TextAlign,
   ungroupSections,
   updateSectionStyle,
@@ -255,15 +261,48 @@ const applyingHistory = ref(false)
 onMounted(() => {
   history.push(serializeDocument(props.modelValue))
   window.addEventListener('keydown', onEditorKeydown)
+  window.addEventListener('pointerdown', onDismissOpenMenus, true)
+  window.addEventListener('focusin', onDismissOpenMenus, true)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onEditorKeydown)
+  window.removeEventListener('pointerdown', onDismissOpenMenus, true)
+  window.removeEventListener('focusin', onDismissOpenMenus, true)
 })
 
+function menuDismissPathKeepsOpen(event: Event): boolean {
+  const path = typeof event.composedPath === 'function' ? event.composedPath() : []
+  return path.some(
+    (node) =>
+      node instanceof Element &&
+      node.matches(
+        '[data-op-popover], [data-op-tool], [data-op-page-add-menu], [data-op-page-add]',
+      ),
+  )
+}
+
+function onDismissOpenMenus(event: Event) {
+  if (!openPopoverId.value && !addMenuOpen.value) return
+  if (menuDismissPathKeepsOpen(event)) return
+  openPopoverId.value = null
+  addMenuOpen.value = false
+}
+
 function onEditorKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape' && (openPopoverId.value || addMenuOpen.value)) {
+    event.preventDefault()
+    openPopoverId.value = null
+    addMenuOpen.value = false
+    return
+  }
   const target = event.target as HTMLElement | null
   if (target?.closest?.('[contenteditable="true"], input, textarea, select')) {
+    return
+  }
+  if (event.key === 'Delete' && selection.selectedSectionIds.length > 0) {
+    event.preventDefault()
+    activateTool('section.delete')
     return
   }
   const mod = event.ctrlKey || event.metaKey
@@ -727,7 +766,7 @@ async function exportAllPagesPng() {
 }
 
 async function exportLayoutJson(mode: 'clipboard' | 'download') {
-  const text = serializeDocument(props.modelValue)
+  const text = serializeLayoutSource(props.modelValue)
   tools.activate('layout.exportJson', { mode })
   if (mode === 'clipboard') {
     await navigator.clipboard?.writeText(text)
@@ -764,7 +803,8 @@ function activateTool(id: ToolId, payload?: unknown) {
     id === 'section.add' ||
     id === 'section.style' ||
     id === 'section.font' ||
-    id === 'section.columns'
+    id === 'section.columns' ||
+    id === 'section.runaround'
   ) {
     tools.activate(id, payload)
     togglePopover(id)
@@ -802,13 +842,6 @@ function activateTool(id: ToolId, payload?: unknown) {
       const allHidden = selectedSections.value.every((s) => s.hidden)
       for (const sectionId of ids) {
         setSectionHidden(page, sectionId, !allHidden)
-      }
-      break
-    }
-    case 'section.runaround': {
-      const allOn = selectedSections.value.every((s) => s.type !== 'runaround' && s.runaround)
-      for (const sectionId of ids) {
-        setSectionRunaround(page, sectionId, !allOn)
       }
       break
     }
@@ -980,6 +1013,22 @@ function patchSelectedStyle(patch: {
 }) {
   for (const id of selection.selectedSectionIds) {
     updateSectionStyle(currentPage.value, id, patch)
+  }
+  bumpDocument()
+}
+
+function onRunaroundToggle(checked: boolean) {
+  for (const id of selection.selectedSectionIds) {
+    setSectionRunaround(currentPage.value, id, checked)
+  }
+  bumpDocument()
+}
+
+function onRunaroundMarginInput(side: 'left' | 'right' | 'top' | 'bottom', raw: string) {
+  const value = Number(raw)
+  if (!Number.isFinite(value)) return
+  for (const id of selection.selectedSectionIds) {
+    setSectionRunaroundMargins(currentPage.value, id, { [side]: value })
   }
   bumpDocument()
 }
@@ -1540,6 +1589,78 @@ defineExpose({
             @activate="activateTool"
             @toggle-popover="togglePopover"
           >
+            <template #popover-section-runaround>
+              <p class="op-popover-title">{{ i18n.t('tools.section.runaround') }}</p>
+              <div class="op-style-form" v-if="primarySelected && primarySelected.type !== 'runaround'">
+                <label class="op-field op-field--check">
+                  <input
+                    data-op-runaround-toggle
+                    type="checkbox"
+                    :checked="primarySelected.runaround"
+                    @change="
+                      onRunaroundToggle(($event.target as HTMLInputElement).checked)
+                    "
+                  />
+                  {{ i18n.t('tools.section.runaround') }}
+                </label>
+                <label class="op-field">
+                  {{ i18n.t('editor.runaround.left') }}
+                  <input
+                    data-op-runaround-margin="left"
+                    type="number"
+                    :value="primarySelected.runaroundMargins.left"
+                    @change="
+                      onRunaroundMarginInput(
+                        'left',
+                        ($event.target as HTMLInputElement).value,
+                      )
+                    "
+                  />
+                </label>
+                <label class="op-field">
+                  {{ i18n.t('editor.runaround.right') }}
+                  <input
+                    data-op-runaround-margin="right"
+                    type="number"
+                    :value="primarySelected.runaroundMargins.right"
+                    @change="
+                      onRunaroundMarginInput(
+                        'right',
+                        ($event.target as HTMLInputElement).value,
+                      )
+                    "
+                  />
+                </label>
+                <label class="op-field">
+                  {{ i18n.t('editor.runaround.above') }}
+                  <input
+                    data-op-runaround-margin="top"
+                    type="number"
+                    :value="primarySelected.runaroundMargins.top"
+                    @change="
+                      onRunaroundMarginInput(
+                        'top',
+                        ($event.target as HTMLInputElement).value,
+                      )
+                    "
+                  />
+                </label>
+                <label class="op-field">
+                  {{ i18n.t('editor.runaround.below') }}
+                  <input
+                    data-op-runaround-margin="bottom"
+                    type="number"
+                    :value="primarySelected.runaroundMargins.bottom"
+                    @change="
+                      onRunaroundMarginInput(
+                        'bottom',
+                        ($event.target as HTMLInputElement).value,
+                      )
+                    "
+                  />
+                </label>
+              </div>
+            </template>
             <template #popover-section-style>
               <p class="op-popover-title">{{ i18n.t('editor.colorsBorder') }}</p>
               <div class="op-style-form" v-if="primarySelected">
