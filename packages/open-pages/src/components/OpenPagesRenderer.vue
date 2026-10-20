@@ -209,6 +209,9 @@ function sectionStyle(section: Section) {
     style.textDecoration = decorations.length ? decorations.join(' ') : 'none'
     // Columns + wrap come from the line-box engine, not CSS multi-column / floats.
   }
+  if (section.type === 'panel') {
+    style.overflow = section.clipContent ? 'hidden' : 'visible'
+  }
   return style
 }
 

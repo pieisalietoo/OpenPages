@@ -19,11 +19,11 @@ Comic panels act as **viewports**: content drawn “inside” a panel (images, n
 
 ## 3. Acceptance criteria
 
-- [ ] `PanelSection` includes `clipContent: boolean` (default true on create / parse migrate).
-- [ ] Renderer applies `overflow: hidden` (or equivalent) when `clipContent` is true.
-- [ ] Child / overlapping content that extends past panel bounds is not visible outside the panel box in the editor canvas and export HTML path that uses the same renderer styles.
-- [ ] Toggling `clipContent` to false is observable in a unit/DOM test (overflow visible).
-- [ ] Documented in package README or SPECS index for hosts.
+- [x] `PanelSection` includes `clipContent: boolean` (default true on create / parse migrate).
+- [x] Renderer applies `overflow: hidden` (or equivalent) when `clipContent` is true.
+- [x] Child / overlapping content that extends past panel bounds is not visible outside the panel box in the editor canvas and export HTML path that uses the same renderer styles.
+- [x] Toggling `clipContent` to false is observable in a unit/DOM test (overflow visible).
+- [x] Documented in package README or SPECS index for hosts.
 
 ## 4. API / surface
 
