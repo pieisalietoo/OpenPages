@@ -34,6 +34,7 @@ import {
 } from '../export/exporters'
 import { createI18n, type LocaleCode, type OpenPagesI18n } from '../i18n'
 import { OPEN_PAGES_I18N } from '../i18n/keys'
+import { insertImageFromSrc, readImageFileAsDataUrl } from '../model/assets'
 import {
   type OpenPagesDocument,
   parseDocument,
@@ -341,6 +342,27 @@ function bumpDocument(payload?: { transient?: boolean }) {
   if (!payload?.transient && !applyingHistory.value) {
     history.push(serializeDocument(props.modelValue))
   }
+}
+
+async function onCanvasImageDrop(event: DragEvent) {
+  event.preventDefault()
+  const file = [...(event.dataTransfer?.files ?? [])].find((f) => f.type.startsWith('image/'))
+  if (!file) return
+  const page = currentPage.value
+  const src = await readImageFileAsDataUrl(file)
+  const pageNode = pageEl.value?.querySelector('[data-op-page]') as HTMLElement | null
+  const rect = pageNode?.getBoundingClientRect()
+  const x = rect ? Math.max(0, event.clientX - rect.left) : page.margins.left
+  const y = rect ? Math.max(0, event.clientY - rect.top) : page.margins.top
+  insertImageFromSrc(props.modelValue, page, {
+    src,
+    alt: file.name,
+    x,
+    y,
+    width: 200,
+    height: 160,
+  })
+  bumpDocument()
 }
 
 const layouts =
@@ -1577,7 +1599,12 @@ defineExpose({
       </button>
     </div>
 
-    <div ref="pageEl" class="op-editor-canvas">
+    <div
+      ref="pageEl"
+      class="op-editor-canvas"
+      @dragover.prevent
+      @drop="onCanvasImageDrop"
+    >
       <OpenPagesRenderer
         :document="modelValue"
         :page-id="pageId"

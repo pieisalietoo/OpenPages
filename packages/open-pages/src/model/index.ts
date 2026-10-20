@@ -1,3 +1,9 @@
+export type { AssetAdapter, InsertImageFromSrcInput } from './assets'
+export {
+  createDocumentAssetAdapter,
+  insertImageFromSrc,
+  readImageFileAsDataUrl,
+} from './assets'
 export type { DataBoundDefaults, DocumentData } from './bindings'
 export { createDataBoundDocument, resolveTemplate } from './bindings'
 export { createCustomFontsDemoDocument, DEMO_CUSTOM_FONTS } from './custom-fonts-demo'
