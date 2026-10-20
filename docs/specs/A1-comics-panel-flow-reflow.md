@@ -22,14 +22,14 @@ Hosts (ComicsGenerator) need a **page of panels** with a fixed **reading flow** 
 
 ## 3. Acceptance criteria
 
-- [ ] A page can store an ordered panel flow (`readingIndex` or equivalent) for all `type === 'panel'` sections.
-- [ ] Applying a comic layout preset initializes flow indices in L→R/T→B order.
-- [ ] `mergePanels(page, panelIds)` produces one panel whose box is the union (or grid-slot union) of inputs; removed ids gone; flow reindexed densely `0..n-1`.
-- [ ] `splitPanel(page, panelId, parts)` creates `parts` panels (≥2) covering the original box; flow inserts them in place of the original index.
-- [ ] `addPanelInFlow` / `removePanelFromFlow` change count and **redistribute** all panel boxes in flow order within the content box (gutters preserved from last layout options or defaults).
-- [ ] After redistribute, surviving panel **ids** that still exist keep the same id; new panels get new ids.
-- [ ] Non-panel sections are left in place (not deleted by reflow).
-- [ ] Ops are available via `applyOp` / documented host API and covered by unit tests (no flake / no DOM).
+- [x] A page can store an ordered panel flow (`readingIndex` or equivalent) for all `type === 'panel'` sections.
+- [x] Applying a comic layout preset initializes flow indices in L→R/T→B order.
+- [x] `mergePanels(page, panelIds)` produces one panel whose box is the union (or grid-slot union) of inputs; removed ids gone; flow reindexed densely `0..n-1`.
+- [x] `splitPanel(page, panelId, parts)` creates `parts` panels (≥2) covering the original box; flow inserts them in place of the original index.
+- [x] `addPanelInFlow` / `removePanelFromFlow` change count and **redistribute** all panel boxes in flow order within the content box (gutters preserved from last layout options or defaults).
+- [x] After redistribute, surviving panel **ids** that still exist keep the same id; new panels get new ids.
+- [x] Non-panel sections are left in place (not deleted by reflow).
+- [x] Ops are available via `applyOp` / documented host API and covered by unit tests (no flake / no DOM).
 
 ## 4. API / surface (proposed)
 

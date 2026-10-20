@@ -34,7 +34,9 @@ export function listLayoutPresets(): LayoutPresetInfo[] {
   return [...PRESETS]
 }
 
-type PageLike = Pick<Page, 'width' | 'height' | 'margins' | 'sections'>
+type PageLike = Pick<Page, 'width' | 'height' | 'margins' | 'sections'> & {
+  panelFlowGutter?: number
+}
 
 function contentBox(page: PageLike) {
   const x = page.margins.left
@@ -104,22 +106,38 @@ export function applyLayoutPreset(
     page.sections.splice(0, page.sections.length)
   }
 
+  let created: Section[] = []
   switch (presetId) {
     case 'blank':
-      return []
+      created = []
+      break
     case 'comic-2x2':
-      return addGrid(page, 2, 2, gutter)
+      created = addGrid(page, 2, 2, gutter)
+      break
     case 'comic-2x3':
-      return addGrid(page, 2, 3, gutter)
+      created = addGrid(page, 2, 3, gutter)
+      break
     case 'comic-3x3':
-      return addGrid(page, 3, 3, gutter)
+      created = addGrid(page, 3, 3, gutter)
+      break
     case 'comic-widescreen':
-      return addGrid(page, 1, 3, gutter)
+      created = addGrid(page, 1, 3, gutter)
+      break
     case 'comic-splash-inset':
-      return addSplashInset(page, gutter)
+      created = addSplashInset(page, gutter)
+      break
     default: {
       const _exhaustive: never = presetId
       throw new Error(`unknown layout preset: ${_exhaustive}`)
     }
   }
+  page.panelFlowGutter = gutter
+  let index = 0
+  for (const section of created) {
+    if (section.type === 'panel') {
+      section.readingIndex = index
+      index += 1
+    }
+  }
+  return created
 }

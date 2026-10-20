@@ -29,6 +29,8 @@ export interface Page {
   orientation: PageOrientation
   preset: PagePresetId
   sections: Section[]
+  /** Last gutter used for comics panel-flow reflow (px). */
+  panelFlowGutter?: number
 }
 
 export interface Asset {
@@ -158,6 +160,10 @@ function parsePage(value: unknown, index: number): Page {
     orientation: parseOrientation(value.orientation),
     preset: parsePreset(value.preset),
     sections: Array.isArray(value.sections) ? value.sections.map(parseSection) : [],
+    panelFlowGutter:
+      typeof value.panelFlowGutter === 'number' && Number.isFinite(value.panelFlowGutter)
+        ? Math.max(0, value.panelFlowGutter)
+        : undefined,
   }
 }
 

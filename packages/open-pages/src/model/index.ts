@@ -82,6 +82,21 @@ export {
   setPageMargins,
 } from './page'
 export { addBlankPage, deletePage, duplicatePage, movePage } from './pages'
+export type { PanelFlowOptions, PanelFlowOptions } from './panel-flow'
+export {
+  addPanelInFlow,
+  addPanelInFlow,
+  mergePanels,
+  mergePanels,
+  reflowPagePanels,
+  reflowPagePanels,
+  removePanelFromFlow,
+  removePanelFromFlow,
+  setPagePanelFlow,
+  setPagePanelFlow,
+  splitPanel,
+  splitPanel,
+} from './panel-flow'
 export type {
   Rect as RunaroundRect,
   RelativeExclusion,

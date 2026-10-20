@@ -83,6 +83,8 @@ export interface ImageSection extends SectionBase {
 export interface PanelSection extends SectionBase {
   type: 'panel'
   borderStyle: PanelBorderStyle
+  /** Comics reading order (L→R, T→B). Dense 0..n-1 when in panel-flow mode. */
+  readingIndex: number
 }
 
 export interface RunaroundSection extends SectionBase {
@@ -165,6 +167,7 @@ export interface AddPanelSectionInput {
   width: number
   height: number
   borderStyle: PanelBorderStyle
+  readingIndex?: number
 }
 
 export interface AddRunaroundSectionInput {
@@ -473,6 +476,10 @@ export function addPanelSection(
     width: input.width,
     height: input.height,
     borderStyle: input.borderStyle,
+    readingIndex:
+      typeof input.readingIndex === 'number' && Number.isFinite(input.readingIndex)
+        ? Math.max(0, Math.floor(input.readingIndex))
+        : page.sections.filter((s) => s.type === 'panel').length,
     ...defaultChrome(),
     borderColor: '#1a1a1a',
     borderWidth: 2,
@@ -1150,10 +1157,15 @@ export function parseSection(value: unknown, index: number): Section {
       if (borderStyle !== 'ink' && borderStyle !== 'double' && borderStyle !== 'rounded') {
         throw new Error(`${path}.borderStyle must be ink, double, or rounded`)
       }
+      const readingIndex =
+        typeof value.readingIndex === 'number' && Number.isFinite(value.readingIndex)
+          ? Math.max(0, Math.floor(value.readingIndex))
+          : 0
       return {
         ...base,
         type: 'panel',
         borderStyle,
+        readingIndex,
       }
     }
     case 'runaround': {
