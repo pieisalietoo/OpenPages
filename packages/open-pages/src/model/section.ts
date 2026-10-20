@@ -85,6 +85,8 @@ export interface PanelSection extends SectionBase {
   borderStyle: PanelBorderStyle
   /** Comics reading order (L→R, T→B). Dense 0..n-1 when in panel-flow mode. */
   readingIndex: number
+  /** When true (default), clip overflowing content to the panel box. */
+  clipContent: boolean
 }
 
 export interface RunaroundSection extends SectionBase {
@@ -168,6 +170,7 @@ export interface AddPanelSectionInput {
   height: number
   borderStyle: PanelBorderStyle
   readingIndex?: number
+  clipContent?: boolean
 }
 
 export interface AddRunaroundSectionInput {
@@ -480,6 +483,7 @@ export function addPanelSection(
       typeof input.readingIndex === 'number' && Number.isFinite(input.readingIndex)
         ? Math.max(0, Math.floor(input.readingIndex))
         : page.sections.filter((s) => s.type === 'panel').length,
+    clipContent: input.clipContent !== false,
     ...defaultChrome(),
     borderColor: '#1a1a1a',
     borderWidth: 2,
@@ -1166,6 +1170,7 @@ export function parseSection(value: unknown, index: number): Section {
         type: 'panel',
         borderStyle,
         readingIndex,
+        clipContent: value.clipContent !== false,
       }
     }
     case 'runaround': {
