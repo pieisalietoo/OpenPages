@@ -1806,6 +1806,7 @@ function imageAlt(section: Section): string {
         :data-op-section-type="section.type"
         :data-op-snap-target="snapTargetIds.has(section.id) ? '' : undefined"
         :data-border-style="section.type === 'panel' ? section.borderStyle : undefined"
+        :data-balloon-style="section.type === 'balloon' ? section.balloonStyle : undefined"
         :style="sectionStyle(section)"
         @click.stop="onSectionClickStop"
         @pointerdown.stop="beginDrag('move', section, $event)"
@@ -1918,6 +1919,25 @@ function imageAlt(section: Section): string {
           :data-border-style="section.borderStyle"
         />
         <div v-else-if="section.type === 'runaround'" class="op-section-runaround" />
+        <div
+          v-else-if="section.type === 'balloon'"
+          class="op-section-balloon"
+          :data-balloon-style="section.balloonStyle"
+          :data-tail-x="section.tailX"
+          :data-tail-y="section.tailY"
+        >
+          {{ section.content }}
+        </div>
+        <div v-else-if="section.type === 'pull-quote'" class="op-section-pull-quote">
+          {{ section.content }}
+        </div>
+        <div v-else-if="section.type === 'byline'" class="op-section-byline">
+          {{ section.content }}
+        </div>
+        <div v-else-if="section.type === 'rule'" class="op-section-rule" />
+        <div v-else-if="section.type === 'folio'" class="op-section-folio">
+          {{ section.content }}
+        </div>
         <template v-if="showResize(section) && !isEditing(section)">
           <button
             v-for="handle in RESIZE_HANDLES"

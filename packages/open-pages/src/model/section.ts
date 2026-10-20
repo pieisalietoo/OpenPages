@@ -2,10 +2,21 @@ import { DEFAULT_RUNAROUND_MARGINS, DEFAULT_WRAP_OFFSET, type RunaroundMargins }
 import { sanitizePanelHtml, sanitizeTextHtml } from './sanitize-html'
 import type { TextFitMode } from './text-layout/fit'
 
-export type SectionType = 'text' | 'headline' | 'image' | 'panel' | 'runaround'
+export type SectionType =
+  | 'text'
+  | 'headline'
+  | 'image'
+  | 'panel'
+  | 'runaround'
+  | 'balloon'
+  | 'pull-quote'
+  | 'byline'
+  | 'rule'
+  | 'folio'
 
 export type ImageFit = 'cover' | 'contain' | 'fill'
 export type PanelBorderStyle = 'ink' | 'double' | 'rounded'
+export type BalloonStyle = 'speech' | 'thought'
 export type TextAlign = 'left' | 'center' | 'right' | 'justify' | 'stretch'
 export type VerticalAlign = 'top' | 'middle' | 'bottom'
 
@@ -80,7 +91,46 @@ export interface RunaroundSection extends SectionBase {
   wrapOffset: number
 }
 
-export type Section = TextSection | HeadlineSection | ImageSection | PanelSection | RunaroundSection
+export interface BalloonSection extends SectionBase {
+  type: 'balloon'
+  content: string
+  balloonStyle: BalloonStyle
+  /** Tail tip X relative to section origin (px). */
+  tailX: number
+  /** Tail tip Y relative to section origin (px). */
+  tailY: number
+}
+
+export interface PullQuoteSection extends SectionBase {
+  type: 'pull-quote'
+  content: string
+}
+
+export interface BylineSection extends SectionBase {
+  type: 'byline'
+  content: string
+}
+
+export interface RuleSection extends SectionBase {
+  type: 'rule'
+}
+
+export interface FolioSection extends SectionBase {
+  type: 'folio'
+  content: string
+}
+
+export type Section =
+  | TextSection
+  | HeadlineSection
+  | ImageSection
+  | PanelSection
+  | RunaroundSection
+  | BalloonSection
+  | PullQuoteSection
+  | BylineSection
+  | RuleSection
+  | FolioSection
 
 export interface AddTextSectionInput {
   x: number
@@ -125,6 +175,48 @@ export interface AddRunaroundSectionInput {
   wrapOffset?: number
 }
 
+export interface AddBalloonSectionInput {
+  x: number
+  y: number
+  width: number
+  height: number
+  content: string
+  balloonStyle: BalloonStyle
+  tailX: number
+  tailY: number
+}
+
+export interface AddPullQuoteSectionInput {
+  x: number
+  y: number
+  width: number
+  height: number
+  content: string
+}
+
+export interface AddBylineSectionInput {
+  x: number
+  y: number
+  width: number
+  height: number
+  content: string
+}
+
+export interface AddRuleSectionInput {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+export interface AddFolioSectionInput {
+  x: number
+  y: number
+  width: number
+  height: number
+  content: string
+}
+
 /** Optional overrides when adding a section (geometry/content); omitted fields use type defaults. */
 export type AddSectionOptions = {
   x?: number
@@ -138,6 +230,9 @@ export type AddSectionOptions = {
   fit?: ImageFit
   borderStyle?: PanelBorderStyle
   wrapOffset?: number
+  balloonStyle?: BalloonStyle
+  tailX?: number
+  tailY?: number
 }
 
 export type PageLike = {
@@ -151,6 +246,11 @@ const DEFAULT_ADD_SIZE: Record<SectionType, { width: number; height: number; con
   image: { width: 240, height: 160 },
   panel: { width: 200, height: 160 },
   runaround: { width: 160, height: 120 },
+  balloon: { width: 160, height: 80, content: '…' },
+  'pull-quote': { width: 220, height: 72, content: 'Pull quote' },
+  byline: { width: 180, height: 24, content: 'By Author' },
+  rule: { width: 240, height: 4 },
+  folio: { width: 40, height: 20, content: '1' },
 }
 
 /**
@@ -210,6 +310,43 @@ export function addSectionToPage(
         width,
         height,
         wrapOffset: options.wrapOffset,
+      })
+    case 'balloon':
+      return addBalloonSection(page, {
+        x,
+        y,
+        width,
+        height,
+        content: options.content ?? defaults.content ?? '…',
+        balloonStyle: options.balloonStyle ?? 'speech',
+        tailX: options.tailX ?? width / 2,
+        tailY: options.tailY ?? height + 16,
+      })
+    case 'pull-quote':
+      return addPullQuoteSection(page, {
+        x,
+        y,
+        width,
+        height,
+        content: options.content ?? defaults.content ?? 'Pull quote',
+      })
+    case 'byline':
+      return addBylineSection(page, {
+        x,
+        y,
+        width,
+        height,
+        content: options.content ?? defaults.content ?? 'By Author',
+      })
+    case 'rule':
+      return addRuleSection(page, { x, y, width, height })
+    case 'folio':
+      return addFolioSection(page, {
+        x,
+        y,
+        width,
+        height,
+        content: options.content ?? defaults.content ?? '1',
       })
   }
 }
@@ -365,6 +502,104 @@ export function addRunaroundSection(
   return section
 }
 
+export function addBalloonSection(
+  page: { sections: Section[] },
+  input: AddBalloonSectionInput,
+): BalloonSection {
+  const section: BalloonSection = {
+    id: newId('sec'),
+    type: 'balloon',
+    x: input.x,
+    y: input.y,
+    width: input.width,
+    height: input.height,
+    content: sanitizeTextHtml(input.content),
+    balloonStyle: input.balloonStyle,
+    tailX: input.tailX,
+    tailY: input.tailY,
+    ...defaultChrome(),
+    backgroundColor: '#ffffff',
+    borderColor: '#1a1a1a',
+    borderWidth: 2,
+  }
+  page.sections.push(section)
+  return section
+}
+
+export function addPullQuoteSection(
+  page: { sections: Section[] },
+  input: AddPullQuoteSectionInput,
+): PullQuoteSection {
+  const section: PullQuoteSection = {
+    id: newId('sec'),
+    type: 'pull-quote',
+    x: input.x,
+    y: input.y,
+    width: input.width,
+    height: input.height,
+    content: sanitizeTextHtml(input.content),
+    ...defaultChrome(),
+  }
+  page.sections.push(section)
+  return section
+}
+
+export function addBylineSection(
+  page: { sections: Section[] },
+  input: AddBylineSectionInput,
+): BylineSection {
+  const section: BylineSection = {
+    id: newId('sec'),
+    type: 'byline',
+    x: input.x,
+    y: input.y,
+    width: input.width,
+    height: input.height,
+    content: sanitizeTextHtml(input.content),
+    ...defaultChrome(),
+  }
+  page.sections.push(section)
+  return section
+}
+
+export function addRuleSection(
+  page: { sections: Section[] },
+  input: AddRuleSectionInput,
+): RuleSection {
+  const section: RuleSection = {
+    id: newId('sec'),
+    type: 'rule',
+    x: input.x,
+    y: input.y,
+    width: input.width,
+    height: input.height,
+    ...defaultChrome(),
+    borderColor: '#1a1a1a',
+    borderWidth: 0,
+    backgroundColor: '#1a1a1a',
+  }
+  page.sections.push(section)
+  return section
+}
+
+export function addFolioSection(
+  page: { sections: Section[] },
+  input: AddFolioSectionInput,
+): FolioSection {
+  const section: FolioSection = {
+    id: newId('sec'),
+    type: 'folio',
+    x: input.x,
+    y: input.y,
+    width: input.width,
+    height: input.height,
+    content: sanitizeTextHtml(input.content),
+    ...defaultChrome(),
+  }
+  page.sections.push(section)
+  return section
+}
+
 function findSection(page: { sections: Section[] }, sectionId: string): Section | undefined {
   return page.sections.find((section) => section.id === sectionId)
 }
@@ -430,6 +665,48 @@ export function duplicateSection(
         width: original.width,
         height: original.height,
         wrapOffset: original.wrapOffset,
+      })
+      break
+    case 'balloon':
+      created = addBalloonSection(page, {
+        ...offset,
+        width: original.width,
+        height: original.height,
+        content: original.content,
+        balloonStyle: original.balloonStyle,
+        tailX: original.tailX,
+        tailY: original.tailY,
+      })
+      break
+    case 'pull-quote':
+      created = addPullQuoteSection(page, {
+        ...offset,
+        width: original.width,
+        height: original.height,
+        content: original.content,
+      })
+      break
+    case 'byline':
+      created = addBylineSection(page, {
+        ...offset,
+        width: original.width,
+        height: original.height,
+        content: original.content,
+      })
+      break
+    case 'rule':
+      created = addRuleSection(page, {
+        ...offset,
+        width: original.width,
+        height: original.height,
+      })
+      break
+    case 'folio':
+      created = addFolioSection(page, {
+        ...offset,
+        width: original.width,
+        height: original.height,
+        content: original.content,
       })
       break
   }
@@ -890,6 +1167,51 @@ export function parseSection(value: unknown, index: number): Section {
         wrapOffset,
       }
     }
+    case 'balloon': {
+      const balloonStyle = value.balloonStyle
+      if (balloonStyle !== 'speech' && balloonStyle !== 'thought') {
+        throw new Error(`${path}.balloonStyle must be speech or thought`)
+      }
+      const tailX =
+        typeof value.tailX === 'number' && Number.isFinite(value.tailX)
+          ? value.tailX
+          : base.width / 2
+      const tailY =
+        typeof value.tailY === 'number' && Number.isFinite(value.tailY)
+          ? value.tailY
+          : base.height + 16
+      return {
+        ...base,
+        type: 'balloon',
+        content: sanitizeTextHtml(requireString(value, 'content', path)),
+        balloonStyle,
+        tailX,
+        tailY,
+      }
+    }
+    case 'pull-quote':
+      return {
+        ...base,
+        type: 'pull-quote',
+        content: sanitizeTextHtml(requireString(value, 'content', path)),
+      }
+    case 'byline':
+      return {
+        ...base,
+        type: 'byline',
+        content: sanitizeTextHtml(requireString(value, 'content', path)),
+      }
+    case 'rule':
+      return {
+        ...base,
+        type: 'rule',
+      }
+    case 'folio':
+      return {
+        ...base,
+        type: 'folio',
+        content: sanitizeTextHtml(requireString(value, 'content', path)),
+      }
     default:
       throw new Error(`${path}.type is unsupported`)
   }

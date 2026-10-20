@@ -1528,7 +1528,18 @@ defineExpose({
         <p class="op-popover-title">{{ i18n.t('editor.addSection') }}</p>
         <div class="op-add-types">
           <button
-            v-for="type in (['text', 'headline', 'image', 'panel', 'runaround'] as const)"
+            v-for="type in ([
+              'text',
+              'headline',
+              'image',
+              'panel',
+              'runaround',
+              'balloon',
+              'pull-quote',
+              'byline',
+              'rule',
+              'folio',
+            ] as const)"
             :key="type"
             type="button"
             class="op-save-btn"
