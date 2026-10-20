@@ -4,6 +4,8 @@ Embeddable Vue 3 layout engine for comics, newspapers, magazines, and similar pr
 
 **Stack:** Vue 3 · Tailwind CSS · Lucide icons · TypeScript · MIT
 
+**Specs (ComicsGenerator blockers):** [docs/SPECS.md](./docs/SPECS.md) · [docs/comicsgenerator-blockers.md](./docs/comicsgenerator-blockers.md)
+
 ## Requirements
 
 - [Node.js](https://nodejs.org/) 20+
