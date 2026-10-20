@@ -40,6 +40,12 @@ export type { HistoryController } from './history'
 export { createHistory } from './history'
 export { createHtmlShowcaseDocument } from './html-showcase-demo'
 export type {
+  ApplyLayoutPresetOptions,
+  LayoutPresetId,
+  LayoutPresetInfo,
+} from './layout-presets'
+export { applyLayoutPreset, listLayoutPresets } from './layout-presets'
+export type {
   CreateLayoutLibraryOptions,
   LayoutChangeEvent,
   LayoutLibrary,
