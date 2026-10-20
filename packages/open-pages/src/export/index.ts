@@ -5,4 +5,9 @@ export type {
   ExportFormat,
   ExportOptions,
 } from './exporters'
-export { createBrowserExportAdapters, createExporter, jpegBytesToPdfDataUrl } from './exporters'
+export {
+  createBrowserExportAdapters,
+  createExporter,
+  fontEmbedCSSFromFonts,
+  jpegBytesToPdfDataUrl,
+} from './exporters'
