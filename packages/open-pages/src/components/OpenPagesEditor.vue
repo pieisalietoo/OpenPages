@@ -370,7 +370,9 @@ const fonts = computed(() => {
 })
 
 const exporter = createExporter({
-  ...createBrowserExportAdapters(),
+  ...createBrowserExportAdapters({
+    fonts: () => catalog.list(),
+  }),
   ...props.exportAdapters,
 })
 

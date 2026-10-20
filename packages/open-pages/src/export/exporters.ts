@@ -1,4 +1,5 @@
 import { toJpeg, toPng } from 'html-to-image'
+import { faceNameForFont, type OpenPagesFont } from '../model/fonts'
 
 export type ExportFormat = 'print' | 'png' | 'pdf'
 
@@ -32,6 +33,8 @@ export type BrowserExportAdapterOptions = {
   capturePng?: (element: HTMLElement) => Promise<string>
   captureJpeg?: (element: HTMLElement) => Promise<string>
   printPage?: (payload: PrintPagePayload) => void | Promise<void>
+  /** Catalog fonts with `source` — embedded into raster export via fontEmbedCSS. */
+  fonts?: () => OpenPagesFont[]
 }
 
 export function createExporter(adapters: ExportAdapters = {}): Exporter {
@@ -174,12 +177,55 @@ export function jpegBytesToPdfDataUrl(jpeg: Uint8Array, widthPx: number, heightP
 
 const captureOptions = { cacheBust: true, pixelRatio: 2 } as const
 
-async function defaultCapturePng(element: HTMLElement): Promise<string> {
-  return toPng(element, captureOptions)
+function cssFormatForFontSource(source: string): string {
+  const s = source.toLowerCase()
+  if (s.includes('woff2') || s.startsWith('data:font/woff2')) return 'woff2'
+  if (s.includes('woff') || s.startsWith('data:font/woff')) return 'woff'
+  if (s.includes('.otf') || s.startsWith('data:font/otf')) return 'opentype'
+  if (s.includes('.ttf') || s.startsWith('data:font/ttf')) return 'truetype'
+  return 'woff'
 }
 
-async function defaultCaptureJpeg(element: HTMLElement): Promise<string> {
-  return toJpeg(element, { ...captureOptions, quality: 0.92 })
+function escapeCssUrl(url: string): string {
+  return url.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+}
+
+/**
+ * Build `@font-face` CSS for catalog entries that declare `source`.
+ * html-to-image only embeds stylesheet / fontEmbedCSS faces — not FontFace API alone.
+ */
+export function fontEmbedCSSFromFonts(fonts: OpenPagesFont[]): string {
+  const rules: string[] = []
+  for (const font of fonts) {
+    if (!font.source) continue
+    const family = faceNameForFont(font).replace(/'/g, "\\'")
+    const weight = font.weight ?? 'normal'
+    const style = font.style ?? 'normal'
+    const format = cssFormatForFontSource(font.source)
+    rules.push(
+      `@font-face { font-family: '${family}'; src: url("${escapeCssUrl(font.source)}") format('${format}'); font-weight: ${weight}; font-style: ${style}; }`,
+    )
+  }
+  return rules.join('\n')
+}
+
+function captureOpts(fonts?: () => OpenPagesFont[]) {
+  const fontEmbedCSS = fontEmbedCSSFromFonts(fonts?.() ?? [])
+  return fontEmbedCSS ? { ...captureOptions, fontEmbedCSS } : { ...captureOptions }
+}
+
+async function defaultCapturePng(
+  element: HTMLElement,
+  fonts?: () => OpenPagesFont[],
+): Promise<string> {
+  return toPng(element, captureOpts(fonts))
+}
+
+async function defaultCaptureJpeg(
+  element: HTMLElement,
+  fonts?: () => OpenPagesFont[],
+): Promise<string> {
+  return toJpeg(element, { ...captureOpts(fonts), quality: 0.92 })
 }
 
 export async function printPageImage(payload: PrintPagePayload): Promise<void> {
@@ -236,8 +282,9 @@ export async function printPageImage(payload: PrintPagePayload): Promise<void> {
 export function createBrowserExportAdapters(
   options: BrowserExportAdapterOptions = {},
 ): ExportAdapters {
-  const capturePng = options.capturePng ?? defaultCapturePng
-  const captureJpeg = options.captureJpeg ?? defaultCaptureJpeg
+  const fonts = options.fonts
+  const capturePng = options.capturePng ?? ((el) => defaultCapturePng(el, fonts))
+  const captureJpeg = options.captureJpeg ?? ((el) => defaultCaptureJpeg(el, fonts))
   const printPage = options.printPage ?? printPageImage
 
   return {
