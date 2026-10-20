@@ -60,6 +60,14 @@ export type {
 export { createLayoutLibrary } from './layouts'
 export { createNewspaperDemoDocument } from './newspaper-demo'
 export type {
+  AddPanelOp,
+  ApplyOpResult,
+  DocumentOp,
+  OpsSession,
+  RemoveSectionOp,
+} from './ops'
+export { applyOp, applyOps, createOpsSession } from './ops'
+export type {
   Guide,
   PageMargins,
   PageOrientation,
