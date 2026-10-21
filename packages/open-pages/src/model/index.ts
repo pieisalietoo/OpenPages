@@ -82,21 +82,21 @@ export {
   setPageMargins,
 } from './page'
 export { addBlankPage, deletePage, duplicatePage, movePage } from './pages'
-export type { PanelFlowOptions, PanelFlowOptions } from './panel-flow'
+export type { PanelFlowOptions } from './panel-flow'
 export {
   addPanelInFlow,
-  addPanelInFlow,
-  mergePanels,
   mergePanels,
   reflowPagePanels,
-  reflowPagePanels,
-  removePanelFromFlow,
   removePanelFromFlow,
   setPagePanelFlow,
-  setPagePanelFlow,
-  splitPanel,
   splitPanel,
 } from './panel-flow'
+export type { PanelBox, PanelFocusTransform, ViewportSize } from './panel-focus'
+export {
+  canSelectWhileFocused,
+  canvasTransformForPanelFocus,
+  pagePointToPanelLocal,
+} from './panel-focus'
 export type {
   Rect as RunaroundRect,
   RelativeExclusion,

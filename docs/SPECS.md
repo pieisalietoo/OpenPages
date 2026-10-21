@@ -6,7 +6,7 @@ Accepted Specs become implementable plan steps. This pack (**A1–A3**) is **acc
 |------|-------|--------|
 | [A1](./specs/A1-comics-panel-flow-reflow.md) | Comics panel flow + reflow (merge/split/add/remove) | accepted + implemented |
 | [A2](./specs/A2-panel-viewport-clip.md) | Panel rectangular viewport clip | accepted + implemented |
-| [A3](./specs/A3-panel-focus-mode.md) | Panel zoom / focus mode (edit-in) | accepted |
+| [A3](./specs/A3-panel-focus-mode.md) | Panel zoom / focus mode (edit-in) | accepted + implemented |
 
 ## ComicsGenerator host checklist (audit refresh)
 
