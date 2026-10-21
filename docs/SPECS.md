@@ -1,17 +1,17 @@
 # OpenPages — Spec index (ComicsGenerator blockers)
 
-Accepted Specs become implementable plan steps. This pack (**A1–A3**) is **accepted** (2026-10-21).
-
 | Spec | Title | Status |
 |------|-------|--------|
 | [A1](./specs/A1-comics-panel-flow-reflow.md) | Comics panel flow + reflow (merge/split/add/remove) | accepted + implemented |
 | [A2](./specs/A2-panel-viewport-clip.md) | Panel rectangular viewport clip | accepted + implemented |
 | [A3](./specs/A3-panel-focus-mode.md) | Panel zoom / focus mode (edit-in) | accepted + implemented |
+| [A4](./specs/A4-layer-navigator-api.md) | Layer navigator API | accepted + implemented |
+| [A5](./specs/A5-panel-viewport-pan-zoom-ui.md) | Panel viewport pan/zoom UI | accepted + implemented |
 
-## ComicsGenerator host checklist (audit refresh)
+## Host checklist
 
-Already landed on `main` (prior work): B4 balloons, E2 comic grids, F2 assetAdapter, H1 ops session.
+Prior: balloons, comic grids, assetAdapter, ops session, A1–A3.
 
-Still Spec-gated (this pack): panel **flow reflow**, **viewport clip**, **focus mode**.
+This pack: **layer navigator API**, **viewport pan/zoom UI**.
 
-Sibling product Specs: `e:\Projects\ComicsGenerator\docs\specs\` (B1–B6).
+Sibling product Specs: `e:\Projects\ComicsGenerator\docs\SPECS.md` (B + C pack).

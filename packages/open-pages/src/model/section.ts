@@ -78,6 +78,10 @@ export interface ImageSection extends SectionBase {
   src: string
   alt: string
   fit: ImageFit
+  /** Pan/zoom of image content inside the section box (A5). */
+  contentOffsetX: number
+  contentOffsetY: number
+  contentScale: number
 }
 
 export interface PanelSection extends SectionBase {
@@ -461,6 +465,9 @@ export function addImageSection(
     src: input.src,
     alt: input.alt,
     fit: input.fit,
+    contentOffsetX: 0,
+    contentOffsetY: 0,
+    contentScale: 1,
     ...defaultChrome(),
   }
   page.sections.push(section)
@@ -1148,12 +1155,25 @@ export function parseSection(value: unknown, index: number): Section {
       if (fit !== 'cover' && fit !== 'contain' && fit !== 'fill') {
         throw new Error(`${path}.fit must be cover, contain, or fill`)
       }
+      const contentScale =
+        typeof value.contentScale === 'number' && Number.isFinite(value.contentScale)
+          ? Math.max(0.05, value.contentScale)
+          : 1
       return {
         ...base,
         type: 'image',
         src: requireString(value, 'src', path),
         alt: requireString(value, 'alt', path),
         fit,
+        contentOffsetX:
+          typeof value.contentOffsetX === 'number' && Number.isFinite(value.contentOffsetX)
+            ? value.contentOffsetX
+            : 0,
+        contentOffsetY:
+          typeof value.contentOffsetY === 'number' && Number.isFinite(value.contentOffsetY)
+            ? value.contentOffsetY
+            : 0,
+        contentScale,
       }
     }
     case 'panel': {

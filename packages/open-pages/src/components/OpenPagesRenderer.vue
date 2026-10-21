@@ -24,6 +24,7 @@ import {
 } from '../model/fonts'
 import { relativeExclusionsForHost, runaroundZonesForHost } from '../model/runaround'
 import { sanitizePanelHtml, sanitizeTextHtml } from '../model/sanitize-html'
+import { contentTransformCss } from '../model/viewport-content'
 import {
   bumpTextSectionFonts,
   deleteSection,
@@ -211,6 +212,9 @@ function sectionStyle(section: Section) {
   }
   if (section.type === 'panel') {
     style.overflow = section.clipContent ? 'hidden' : 'visible'
+  }
+  if (section.type === 'image') {
+    style.overflow = 'hidden'
   }
   return style
 }
@@ -1914,7 +1918,11 @@ function imageAlt(section: Section): string {
           class="op-section-image"
           :src="imageSrc(section)"
           :alt="imageAlt(section)"
-          :style="{ objectFit: section.fit }"
+          :style="{
+            objectFit: section.fit,
+            transform: contentTransformCss(section),
+            transformOrigin: 'center center',
+          }"
         />
         <div
           v-else-if="section.type === 'panel'"

@@ -9,3 +9,9 @@ Locked with ComicsGenerator planning session:
 3. **Focus (A3):** edit-in single panel; exit zoom to work on other panels.
 
 See [SPECS.md](./SPECS.md).
+
+## 2026-10-21 — Pack A4–A5 (ComicsGenerator Phase 4)
+
+4. **Layer navigator (A4):** first-class list/reorder/visibility/lock API exported from `@openpages/vue`; host CG consumes it (no host-only duplicate engine).
+5. **Viewport pan/zoom UI (A5):** in-editor pan/zoom of clipped panel content; rectangular clip only; transforms persist in document JSON.
+

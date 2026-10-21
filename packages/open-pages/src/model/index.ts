@@ -51,6 +51,24 @@ export type {
   LayoutPresetInfo,
 } from './layout-presets'
 export { applyLayoutPreset, listLayoutPresets } from './layout-presets'
+export type { LayerDescriptor, PageLayers } from './layer-nav'
+export {
+  layerBringForward,
+  layerBringToFront,
+  layerSendBackward,
+  layerSendToBack,
+  layerSetHidden,
+  layerSetLocked,
+  listPageLayers,
+} from './layer-nav'
+export type { ContentTransform } from './viewport-content'
+export {
+  contentTransformCss,
+  DEFAULT_CONTENT_TRANSFORM,
+  nudgeImageContent,
+  readContentTransform,
+  setImageContentTransform,
+} from './viewport-content'
 export type {
   CreateLayoutLibraryOptions,
   LayoutChangeEvent,
