@@ -20,12 +20,12 @@ Authors need to **zoom into one panel**, work **fully inside it** (place/move ar
 
 ## 3. Acceptance criteria
 
-- [ ] API/UI to enter focus on a panel id and exit to page view.
-- [ ] In focus, the visible canvas is the panel rectangle (letterbox/pillarbox OK); page chrome outside the panel is not the interaction target for placement.
-- [ ] Pointer-driven edits use panel-local coordinates (verified by test: drop/place near local 0,0 lands at panel origin).
-- [ ] Cannot select/edit a different page panel until focus exits (or explicit exit).
-- [ ] Events `panel-focus-enter` / `panel-focus-exit` fire once per transition.
-- [ ] Undo/redo still works for edits made while focused (existing history/ops).
+- [x] API/UI to enter focus on a panel id and exit to page view.
+- [x] In focus, the visible canvas is the panel rectangle (letterbox/pillarbox OK); page chrome outside the panel is not the interaction target for placement.
+- [x] Pointer-driven edits use panel-local coordinates (verified by test: drop/place near local 0,0 lands at panel origin).
+- [x] Cannot select/edit a different page panel until focus exits (or explicit exit).
+- [x] Events `panel-focus-enter` / `panel-focus-exit` fire once per transition.
+- [x] Undo/redo still works for edits made while focused (existing history/ops).
 
 ## 4. API / surface
 

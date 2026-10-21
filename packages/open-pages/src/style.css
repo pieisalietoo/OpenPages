@@ -285,6 +285,20 @@
   min-width: 0;
 }
 
+.op-panel-focus-bar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.35rem 0.75rem;
+}
+
+.op-editor-canvas.is-panel-focus {
+  overflow: hidden;
+}
+
+.op-editor-canvas-stage {
+  transform-origin: 0 0;
+}
+
 .op-page-nav {
   display: flex;
   align-items: center;

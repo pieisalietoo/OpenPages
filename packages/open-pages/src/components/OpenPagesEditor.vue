@@ -56,6 +56,7 @@ import { createHistory } from '../model/history'
 import { createLayoutLibrary, type LayoutLibrary, type NamedLayout } from '../model/layouts'
 import { applyPagePreset, setPageMargins } from '../model/page'
 import { addBlankPage, deletePage, duplicatePage, movePage } from '../model/pages'
+import { canSelectWhileFocused, canvasTransformForPanelFocus } from '../model/panel-focus'
 import {
   type AddSectionOptions,
   addSectionToPage,
@@ -219,6 +220,8 @@ const emit = defineEmits<{
   fontsMissing: [string[]]
   export: [{ format: ExportFormat | 'json'; result: unknown }]
   selectionChange: [string[]]
+  'panel-focus-enter': [{ panelId: string }]
+  'panel-focus-exit': [{ panelId: string }]
 }>()
 
 const i18n = props.i18n ?? createI18n({ locale: props.locale })
@@ -657,7 +660,46 @@ function emitSelection() {
   emit('selectionChange', [...selection.selectedSectionIds])
 }
 
+const focusPanelId = ref<string | null>(null)
+const focusViewport = ref({ width: 800, height: 600 })
+
+const focusCanvasStyle = computed(() => {
+  if (!focusPanelId.value) return {}
+  const panel = currentPage.value.sections.find(
+    (s) => s.id === focusPanelId.value && s.type === 'panel',
+  )
+  if (!panel) return {}
+  const t = canvasTransformForPanelFocus(currentPage.value, panel, focusViewport.value)
+  return {
+    transform: t.transform,
+    transformOrigin: t.transformOrigin,
+  }
+})
+
+function enterPanelFocus(panelId: string) {
+  const panel = currentPage.value.sections.find((s) => s.id === panelId && s.type === 'panel')
+  if (!panel) return
+  const rect = pageEl.value?.getBoundingClientRect()
+  if (rect && rect.width > 0 && rect.height > 0) {
+    focusViewport.value = { width: rect.width, height: rect.height }
+  }
+  focusPanelId.value = panelId
+  selectSection(selection, panelId)
+  emitSelection()
+  emit('panel-focus-enter', { panelId })
+}
+
+function exitPanelFocus() {
+  const panelId = focusPanelId.value
+  if (!panelId) return
+  focusPanelId.value = null
+  emit('panel-focus-exit', { panelId })
+}
+
 function onSelect(sectionId: string, options: { additive: boolean }) {
+  if (!canSelectWhileFocused(focusPanelId.value, sectionId)) {
+    return
+  }
   if (options.additive) {
     toggleSectionSelection(selection, sectionId)
   } else {
@@ -1218,6 +1260,9 @@ defineExpose({
   tools,
   layouts,
   selection,
+  enterPanelFocus,
+  exitPanelFocus,
+  focusPanelId,
 })
 </script>
 
@@ -1600,11 +1645,23 @@ defineExpose({
     </div>
 
     <div
+      v-if="focusPanelId"
+      class="op-panel-focus-bar"
+      data-op-panel-focus-bar
+    >
+      <button type="button" data-op-panel-focus-exit @click="exitPanelFocus">
+        Exit panel focus
+      </button>
+    </div>
+    <div
       ref="pageEl"
       class="op-editor-canvas"
+      :class="{ 'is-panel-focus': Boolean(focusPanelId) }"
+      data-op-panel-focus-canvas
       @dragover.prevent
       @drop="onCanvasImageDrop"
     >
+      <div class="op-editor-canvas-stage" :style="focusCanvasStyle">
       <OpenPagesRenderer
         :document="modelValue"
         :page-id="pageId"
@@ -1964,6 +2021,7 @@ defineExpose({
           </OpenPagesToolbar>
         </template>
       </OpenPagesRenderer>
+      </div>
     </div>
 
     <nav
