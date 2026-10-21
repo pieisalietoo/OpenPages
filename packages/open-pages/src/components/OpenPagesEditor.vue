@@ -35,6 +35,7 @@ import {
 import { createI18n, type LocaleCode, type OpenPagesI18n } from '../i18n'
 import { OPEN_PAGES_I18N } from '../i18n/keys'
 import { insertImageFromSrc, readImageFileAsDataUrl } from '../model/assets'
+import { nudgeImageContent } from '../model/viewport-content'
 import {
   type OpenPagesDocument,
   parseDocument,
@@ -308,6 +309,34 @@ function onEditorKeydown(event: KeyboardEvent) {
     event.preventDefault()
     activateTool('section.delete')
     return
+  }
+  // A5: Alt+arrows pan / Alt++- zoom image content inside clipped frame
+  if (event.altKey && selection.selectedSectionIds.length === 1) {
+    const page = props.modelValue.pages[pageIndex.value]
+    const sectionId = selection.selectedSectionIds[0]
+    const section = page?.sections.find((s) => s.id === sectionId)
+    if (page && section?.type === 'image') {
+      const step = event.shiftKey ? 20 : 4
+      let handled = false
+      if (event.key === 'ArrowLeft') {
+        handled = nudgeImageContent(page, sectionId, -step, 0)
+      } else if (event.key === 'ArrowRight') {
+        handled = nudgeImageContent(page, sectionId, step, 0)
+      } else if (event.key === 'ArrowUp') {
+        handled = nudgeImageContent(page, sectionId, 0, -step)
+      } else if (event.key === 'ArrowDown') {
+        handled = nudgeImageContent(page, sectionId, 0, step)
+      } else if (event.key === '=' || event.key === '+') {
+        handled = nudgeImageContent(page, sectionId, 0, 0, 0.1)
+      } else if (event.key === '-' || event.key === '_') {
+        handled = nudgeImageContent(page, sectionId, 0, 0, -0.1)
+      }
+      if (handled) {
+        event.preventDefault()
+        bumpDocument()
+        return
+      }
+    }
   }
   const mod = event.ctrlKey || event.metaKey
   if (!mod) return
