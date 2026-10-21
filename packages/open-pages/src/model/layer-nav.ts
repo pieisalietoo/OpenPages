@@ -38,7 +38,7 @@ export function listPageLayers(page: PageLayers): LayerDescriptor[] {
     name: layerName(section),
     hidden: Boolean(section.hidden),
     locked: Boolean(section.locked),
-    groupId: section.groupId,
+    groupId: section.groupId ?? undefined,
   }))
 }
 
