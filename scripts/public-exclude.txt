@@ -1,0 +1,19 @@
+# Paths relative to private repo root. Lines starting with # are comments.
+# Directory patterns end with /. Glob * matches a single path segment.
+
+.cursor/
+.cursorignore
+docs/
+TASKS.md
+BOOTSTRAP.md
+DECISIONS.md
+tdd-evidence/
+repomap/
+.repomix/
+repomix.config.json
+artifacts/
+scripts/
+node_modules/
+dist/
+coverage/
+.turbo/

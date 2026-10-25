@@ -31,6 +31,39 @@ describe('text-layout layout + fit', () => {
     expect(firstBand.every((l) => l.x + l.width <= 50 || l.x >= 100)).toBe(true)
   })
 
+  it('does not orphan the first letter into a narrow runaround gutter', () => {
+    // char width 5; left gutter w=5 fits only "L"; title belongs on the wide right segment.
+    const result = layoutTextFrame({
+      text: "L'ANATOMIA DEL TITOLO",
+      host: { x: 0, y: 0, width: 400, height: 40 },
+      columnCount: 1,
+      columnGap: 16,
+      fontSize: 10,
+      lineHeight: 1,
+      exclusions: [{ x: 5, y: 0, width: 150, height: 10 }],
+      measure,
+    })
+    const firstBand = result.lines.filter((l) => l.y === 0)
+    expect(firstBand.some((l) => l.text === 'L')).toBe(false)
+    expect(firstBand.some((l) => l.x >= 155 && l.text.startsWith("L'ANATOMIA"))).toBe(true)
+  })
+
+  it('places an overlong word whole when no wider slot remains (no mid-glyph break)', () => {
+    const result = layoutTextFrame({
+      text: 'ABCDEFGHIJKLMNOP',
+      host: { x: 0, y: 0, width: 50, height: 40 },
+      columnCount: 1,
+      columnGap: 16,
+      fontSize: 10,
+      lineHeight: 1,
+      exclusions: [],
+      measure,
+    })
+    // char width 5; column w=50 < 16 chars — keep the token intact (may overflow the slot)
+    expect(result.lines.map((l) => l.text)).toEqual(['ABCDEFGHIJKLMNOP'])
+    expect(result.hadSoftBreak).toBeFalsy()
+  })
+
   it('fills columns in order when columnCount is 2', () => {
     const result = layoutTextFrame({
       text: 'one two three four five six seven eight nine ten',

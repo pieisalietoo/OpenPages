@@ -168,6 +168,7 @@ export {
   nudgeImageContent,
   readContentTransform,
   setImageContentTransform,
+  ensureOpenPagesFontsReady,
   loadOpenPagesFonts,
   matchCatalogFont,
   mergePanels,

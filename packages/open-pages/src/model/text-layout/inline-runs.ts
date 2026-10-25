@@ -3,6 +3,8 @@
  * Used to paint b/i/u/s/color on line boxes while layout stays model-first.
  */
 
+import { normalizeTextBlanks } from './html-text'
+
 export interface InlineRunStyle {
   bold?: boolean
   italic?: boolean
@@ -79,7 +81,10 @@ function styleFromElement(el: Element, base: InlineRunStyle): InlineRunStyle {
 
 function walk(node: Node, style: InlineRunStyle, out: InlineRun[]) {
   if (node.nodeType === Node.TEXT_NODE) {
-    pushRun(out, node.textContent ?? '', style)
+    // Strip newlines so run offsets match layout's visible plain (where \n are
+    // control tokens, not painted into line.text). Otherwise body/join \n drift
+    // mid-glyph-paints every subsequent line.
+    pushRun(out, normalizeTextBlanks(node.textContent ?? '').replace(/\r?\n/g, ''), style)
     return
   }
   if (node.nodeType !== Node.ELEMENT_NODE) return

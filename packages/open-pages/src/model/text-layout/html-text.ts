@@ -80,38 +80,47 @@ function domToPlain(node: Node, list?: { kind: 'ul' | 'ol'; index: number }): st
   return out
 }
 
+/**
+ * Unicode / lookalike blanks → ASCII space so tokenize can word-wrap.
+ * Includes Zs separators plus Braille blank / ZWSP that look empty but are not `\s`.
+ */
+export function normalizeTextBlanks(s: string): string {
+  return s.replace(/[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000\u2800\u200B\uFEFF]/g, ' ')
+}
+
 /** HTML from contenteditable → plain text with real newlines for hard breaks. */
 export function htmlToPlainText(html: string): string {
   if (!html) return ''
   if (typeof document !== 'undefined') {
     const el = document.createElement('div')
     el.innerHTML = html
-    return domToPlain(el)
-      .replace(/\u00a0/g, ' ')
+    return normalizeTextBlanks(domToPlain(el))
       .replace(/\n{3,}/g, '\n\n')
       .replace(/^\n+|\n+$/g, '')
   }
-  return html
-    .replace(
-      /<(div|p|li|h[1-6]|tr|blockquote|pre|ul|ol)\b([^>]*)>/gi,
-      (_m, tag: string, attrs: string) => {
-        const keep = /\bdata-op-keep-with-next\s*=\s*["']?(\d+)/i.exec(attrs)
-        const n = keep ? Number.parseInt(keep[1] ?? '', 10) : NaN
-        const keepMk =
-          Number.isFinite(n) && n > 0 ? `\uE000${Math.min(99, Math.floor(n))}\uE001` : ''
-        const t = tag.toLowerCase()
-        const styleMk = STYLE_TAGS.has(t) ? styleMarker(t) : ''
-        return `\n${keepMk}${styleMk}`
-      },
-    )
-    .replace(/<\/(div|p|li|h[1-6]|tr|blockquote|pre|ul|ol)>/gi, '\n')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&quot;/g, '"')
+  return normalizeTextBlanks(
+    html
+      .replace(
+        /<(div|p|li|h[1-6]|tr|blockquote|pre|ul|ol)\b([^>]*)>/gi,
+        (_m, tag: string, attrs: string) => {
+          const keep = /\bdata-op-keep-with-next\s*=\s*["']?(\d+)/i.exec(attrs)
+          const n = keep ? Number.parseInt(keep[1] ?? '', 10) : NaN
+          const keepMk =
+            Number.isFinite(n) && n > 0 ? `\uE000${Math.min(99, Math.floor(n))}\uE001` : ''
+          const t = tag.toLowerCase()
+          const styleMk = STYLE_TAGS.has(t) ? styleMarker(t) : ''
+          return `\n${keepMk}${styleMk}`
+        },
+      )
+      .replace(/<\/(div|p|li|h[1-6]|tr|blockquote|pre|ul|ol)>/gi, '\n')
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&quot;/g, '"'),
+  )
     .replace(/\n{3,}/g, '\n\n')
     .replace(/^\n+|\n+$/g, '')
 }

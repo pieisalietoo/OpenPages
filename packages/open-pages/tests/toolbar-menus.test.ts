@@ -60,6 +60,70 @@ describe('toolbar menus dismiss', () => {
 
     wrapper.unmount()
   })
+
+  it('hides the selection toolbar when Escape is pressed', async () => {
+    const doc = createDocument({ title: 'SelEsc' })
+    const page = firstPage(doc)
+    const section = addTextSection(page, {
+      x: 20,
+      y: 40,
+      width: 120,
+      height: 40,
+      content: 'Hi',
+    })
+    const wrapper = mount(OpenPagesEditor, {
+      props: { modelValue: doc },
+      attachTo: document.body,
+    })
+
+    await wrapper.get(`[data-op-section="${section.id}"]`).trigger('pointerdown', {
+      button: 0,
+    })
+    expect(wrapper.find('[data-op-selection-chrome] [data-op-toolbar="selection"]').exists()).toBe(
+      true,
+    )
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    await nextTick()
+    expect(wrapper.find('[data-op-selection-chrome]').exists()).toBe(false)
+
+    wrapper.unmount()
+  })
+
+  it('closes an open selection popover before clearing selection on Escape', async () => {
+    const doc = createDocument({ title: 'PopEsc' })
+    const page = firstPage(doc)
+    const section = addTextSection(page, {
+      x: 20,
+      y: 40,
+      width: 120,
+      height: 40,
+      content: 'Hi',
+    })
+    const wrapper = mount(OpenPagesEditor, {
+      props: { modelValue: doc },
+      attachTo: document.body,
+    })
+
+    await wrapper.get(`[data-op-section="${section.id}"]`).trigger('pointerdown', {
+      button: 0,
+    })
+    await wrapper.get('[data-op-tool="section.style"]').trigger('click')
+    expect(wrapper.find('[data-op-popover="section.style"]').exists()).toBe(true)
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    await nextTick()
+    expect(wrapper.find('[data-op-popover="section.style"]').exists()).toBe(false)
+    expect(wrapper.find('[data-op-selection-chrome] [data-op-toolbar="selection"]').exists()).toBe(
+      true,
+    )
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    await nextTick()
+    expect(wrapper.find('[data-op-selection-chrome]').exists()).toBe(false)
+
+    wrapper.unmount()
+  })
 })
 
 describe('selection Delete key', () => {

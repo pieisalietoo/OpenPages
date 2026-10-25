@@ -46,8 +46,8 @@ import {
   applyCatalogFontSelection,
   BUILTIN_FONTS,
   createFontCatalog,
+  ensureOpenPagesFontsReady,
   type FontCatalog,
-  loadOpenPagesFonts,
   matchCatalogFont,
   missingFontFamilies,
   type OpenPagesFont,
@@ -268,6 +268,7 @@ onMounted(() => {
   window.addEventListener('keydown', onEditorKeydown)
   window.addEventListener('pointerdown', onDismissOpenMenus, true)
   window.addEventListener('focusin', onDismissOpenMenus, true)
+  void prepareCatalogFonts()
 })
 
 onBeforeUnmount(() => {
@@ -295,11 +296,21 @@ function onDismissOpenMenus(event: Event) {
 }
 
 function onEditorKeydown(event: KeyboardEvent) {
-  if (event.key === 'Escape' && (openPopoverId.value || addMenuOpen.value)) {
-    event.preventDefault()
-    openPopoverId.value = null
-    addMenuOpen.value = false
-    return
+  if (event.key === 'Escape') {
+    if (openPopoverId.value || addMenuOpen.value) {
+      event.preventDefault()
+      openPopoverId.value = null
+      addMenuOpen.value = false
+      return
+    }
+    // Text edit / drag handlers call preventDefault first; don't also deselect.
+    if (event.defaultPrevented) return
+    if (selection.selectedSectionIds.length > 0) {
+      event.preventDefault()
+      clearSelection(selection)
+      emitSelection()
+      return
+    }
   }
   const target = event.target as HTMLElement | null
   if (target?.closest?.('[contenteditable="true"], input, textarea, select')) {
@@ -412,6 +423,22 @@ const catalog: FontCatalog =
     fonts: props.fonts,
     includeBuiltins: false,
   })
+
+/** False until catalog `@font-face` sources are loaded — fit must wait. */
+const fontsReady = ref(!catalog.list().some((f) => Boolean(f.source)))
+const fontsLayoutEpoch = ref(0)
+
+async function prepareCatalogFonts() {
+  const list = catalog.list()
+  if (!list.some((f) => Boolean(f.source))) {
+    fontsReady.value = true
+    return
+  }
+  fontsReady.value = false
+  await ensureOpenPagesFontsReady(list)
+  fontsReady.value = true
+  fontsLayoutEpoch.value++
+}
 
 catalog.on('fontsChange', (event) => {
   fontEpoch.value += 1
@@ -1027,7 +1054,9 @@ async function addFontFromForm() {
   }
   const added = catalog.add(font)
   if (!added) return
-  await loadOpenPagesFonts([added])
+  await ensureOpenPagesFontsReady([added])
+  fontsReady.value = true
+  fontsLayoutEpoch.value++
   fontFormLabel.value = ''
   fontFormSource.value = ''
   fontFormWeight.value = ''
@@ -1297,7 +1326,11 @@ defineExpose({
 
 <template>
   <OpShadowRoot :extra-styles="shadowStyles">
-  <div class="op-editor" data-op-editor>
+  <div
+    class="op-editor"
+    data-op-editor
+    :data-op-fonts-ready="fontsReady ? 'true' : 'false'"
+  >
     <OpenPagesToolbar
       v-if="documentToolbarEntries"
       scope="document"
@@ -1699,6 +1732,8 @@ defineExpose({
         :snap-enabled="magnetEnabled"
         :show-hidden="true"
         :fonts="fonts"
+        :fonts-ready="fontsReady"
+        :fonts-layout-epoch="fontsLayoutEpoch"
         @select="onSelect"
         @clear-selection="onClearSelection"
         @change="bumpDocument"

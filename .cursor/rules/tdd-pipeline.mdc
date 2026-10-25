@@ -1,0 +1,35 @@
+---
+description: Strict Spec-Driven TDD agentic pipeline (RED → GREEN → PRUNE → gatekeeper)
+globs: **/*
+alwaysApply: true
+---
+
+# TDD & agentic pipeline
+
+## Inviolable TDD rule
+
+- Never write production code before a failing unit/integration test exists for that behavior.
+- When implementing a feature, start by creating or updating tests (e.g. `tests/` or co-located `*.test.*`).
+- Run tests via the terminal. Confirm they **FAIL** before implementing.
+- If new tests pass with no new production code, **stop** and rewrite the tests (invalid / tautological RED).
+
+## Phase roles
+
+- **RED:** tests only; no feature implementation. After the RED test run, append full output to `tdd-evidence/red.txt` with a clear cycle banner.
+- **GREEN:** minimal code to pass failing tests; YAGNI; prefer terminal failure output over whole-repo dumps. After the GREEN test run, append full output to `tdd-evidence/green.txt` with a clear cycle banner.
+- **PRUNE:** no new features; DRY; shorten without hurting clarity; keep tests green.
+- **Gatekeeper:** run project `scripts/gatekeeper` (or documented alias) before claiming a step done; fix from tool output. Do not put gatekeeper output in the RED/GREEN evidence files.
+
+## Plan-step boundaries
+
+- A plan step is one `TASKS.md` / plan item (may contain several RED↔GREEN cycles).
+- **Mandatory commit:** after gatekeeper passes for a completed step (and at end of a development slice), always create a git commit. Interactive mode may confirm **message wording** only — never skip the commit.
+- Before starting a new step: if the working tree is dirty, **commit** the previous step first (message describes that previous step). Interactive: confirm/edit message then commit; auto-advance: commit yourself.
+- After that inter-step commit: reset `tdd-evidence/red.txt` and `tdd-evidence/green.txt` (empty). Never reset mid-step.
+- Do not start the next step until the previous step’s commit exists.
+
+## Context discipline
+
+- Prefer failing test output, type/lint diagnostics, and narrow file reads.
+- Do not load lockfiles, `node_modules`, venvs, build, or coverage into context.
+- Do not add speculative files, docs, or abstractions “for later”.

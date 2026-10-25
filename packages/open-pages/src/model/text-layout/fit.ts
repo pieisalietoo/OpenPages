@@ -28,10 +28,18 @@ export interface FitTextFrameResult extends LayoutTextFrameResult {
   lineHeight: number
 }
 
+function scaleInlineRuns(runs: InlineRun[] | undefined, scale: number): InlineRun[] | undefined {
+  if (!runs?.length || scale === 1) return runs
+  return runs.map((run) =>
+    run.fontSize == null ? run : { ...run, fontSize: Math.max(1, run.fontSize * scale) },
+  )
+}
+
 function layoutAtScale(input: FitTextFrameInput, scale: number) {
   return layoutTextFrame({
     ...input,
     fontSize: Math.max(1, input.fontSize * scale),
+    inlineRuns: scaleInlineRuns(input.inlineRuns, scale),
   })
 }
 
@@ -56,7 +64,9 @@ export function fitTextFrame(input: FitTextFrameInput): FitTextFrameResult {
   for (let i = 0; i < 18; i++) {
     const mid = (lo + hi) / 2
     const laid = layoutAtScale(input, mid)
-    if (!laid.overflow && laid.contentBottom <= input.host.height + 0.5) {
+    // Soft mid-glyph breaks mean the scale is still too large for the column
+    // (common with absolute inline font-size); keep shrinking.
+    if (!laid.overflow && !laid.hadSoftBreak && laid.contentBottom <= input.host.height + 0.5) {
       best = laid
       bestScale = mid
       lo = mid

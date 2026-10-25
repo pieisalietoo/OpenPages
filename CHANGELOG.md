@@ -20,7 +20,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Selection and text chrome (and their menus) can render outside page bounds while editing; export still clips the page.
 - Toolbar and page-add menus close on outside click / focus loss, and when Escape is pressed.
+- Escape clears the selection (hides the selection toolbar) after menus are closed.
 - Delete key removes the selected section(s).
+- Text layout no longer orphans the first letter of a word into a narrow runaround gutter when a wider segment remains (fit-to-frame titles).
+- Fit-to-frame scales absolute inline `font-size` with the frame and treats mid-word soft-breaks as too-large, so pasted rich text no longer wraps mid-glyph or glues leftovers onto the next heading.
+- Fit-to-frame waits until catalog custom font faces are loaded (`data-op-fonts-ready`) so wide faces are not measured with fallback metrics.
 
 ## [0.5.0] - 2026-10-07
 

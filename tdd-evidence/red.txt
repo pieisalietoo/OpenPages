@@ -1,0 +1,320 @@
+﻿
+======== RED: Calibri mid-word wrap (user dump) 2026-10-14T11:04:57.0551024+02:00 ========
+Cause probe: soft-break mid-glyph is the only path that produces the dump signature.
+Clean Calibri HTML: PASS (no mid-word). U+2800 blanks / oversized tokens: FAIL (mid-word).
+
+ RUN  v3.2.7 E:/Projects/OpenPages/packages/open-pages
+
+stdout | tests/text-layout-calibri-midword-repro.test.ts > repro: Calibri 3-col fit mid-word wrap (user dump) > baseline: clean HTML + Calibri does not mid-word-wrap
+clean {
+  fontSize: 29.589096069335938,
+  hadSoftBreak: false,
+  midCount: 0,
+  sample: [
+    'risultati di una ',
+    'entusiastica ',
+    'preparazione ',
+    'estiva volta a ',
+    'prendere almeno ',
+    'tre gol a ',
+    'partita.┬╗',
+    'Mister Sandrino e '
+  ]
+}
+
+stdout | tests/text-layout-calibri-midword-repro.test.ts > repro: Calibri 3-col fit mid-word wrap (user dump) > Unicode blank separators must not cause mid-word soft-breaks (user-dump signature)
+braille-spaces RED {
+  fontSize: 4,
+  hadSoftBreak: true,
+  midCount: 4,
+  mids: [
+    `"suΓáÇl'unicoΓáÇattaccanteΓáÇcheΓáÇef" || "fettivamenteΓáÇsegner├áΓáÇnellaΓáÇs"`,
+    '"ltaΓáÇgi├áΓáÇinfortunato...ΓáÇOpsΓáÇq" || "uestoΓáÇforseΓáÇnonΓáÇ├¿ΓáÇvero!ΓáÇPerΓáÇ"',
+    '"ttiveΓáÇrinunciandoΓáÇaiΓáÇcaposal" || "diΓáÇdellaΓáÇnostraΓáÇdifesaΓáÇdelΓáÇp"',
+    '"ΓáÇvorreiΓáÇrisultareΓáÇprovocator" || "ioΓáÇmaΓáÇpensereiΓáÇgi├áΓáÇaΓáÇcomeΓáÇin"'
+  ],
+  sample: [
+    'IΓáÇZoticoniΓáÇ2ΓáÇ-ΓáÇ1ΓáÇILΓáÇBOT',
+    'MisterΓáÇDocΓáÇeΓáÇMisterΓáÇIng:ΓáÇ┬½DireiΓáÇunaΓáÇpartenzaΓáÇaΓáÇrottoΓáÇdiΓáÇculo....ΓáÇDelΓáÇrestoΓáÇlaΓáÇclasseΓáÇnonΓáÇ├¿ΓáÇacquaΓáÇeΓáÇnemmenoΓáÇsborraΓáÇ...┬╗'
+  ]
+}
+
+stdout | tests/text-layout-calibri-midword-repro.test.ts > repro: Calibri 3-col fit mid-word wrap (user dump) > never soft-breaks an oversized token mid-glyph (place whole or skip slot)
+oversized-token RED {
+  hadSoftBreak: true,
+  lines: [
+    'il ',      'mercato ',
+    'di ',      "quest'an",
+    'no si e ', 'incentra',
+    'to'
+  ],
+  mids: [ `"quest'an" || "no si e "`, '"incentra" || "to"' ]
+}
+
+ Γ£ô tests/text-layout-calibri-midword-repro.test.ts > repro: Calibri 3-col fit mid-word wrap (user dump) > baseline: clean HTML + Calibri does not mid-word-wrap 32ms
+ Γ£ô tests/text-layout-calibri-midword-repro.test.ts > repro: Calibri 3-col fit mid-word wrap (user dump) > incentrato at 22px fits a 251.5px column ΓÇö soft-breaking it is unjustified by measure 1ms
+ Γ£ô tests/text-layout-calibri-midword-repro.test.ts > repro: Calibri 3-col fit mid-word wrap (user dump) > runaround alone does not mid-word-wrap clean body text 19ms
+ ├ù tests/text-layout-calibri-midword-repro.test.ts > repro: Calibri 3-col fit mid-word wrap (user dump) > Unicode blank separators must not cause mid-word soft-breaks (user-dump signature) 34ms
+   ΓåÆ ["\"suΓáÇl'unicoΓáÇattaccanteΓáÇcheΓáÇef\" || \"fettivamenteΓáÇsegner├áΓáÇnellaΓáÇs\"","\"ltaΓáÇgi├áΓáÇinfortunato...ΓáÇOpsΓáÇq\" || \"uestoΓáÇforseΓáÇnonΓáÇ├¿ΓáÇvero!ΓáÇPerΓáÇ\"","\"ttiveΓáÇrinunciandoΓáÇaiΓáÇcaposal\" || \"diΓáÇdellaΓáÇnostraΓáÇdifesaΓáÇdelΓáÇp\"","\"ΓáÇvorreiΓáÇrisultareΓáÇprovocator\" || \"ioΓáÇmaΓáÇpensereiΓáÇgi├áΓáÇaΓáÇcomeΓáÇin\""]: expected [ ΓÇª(4) ] to deeply equal []
+ ├ù tests/text-layout-calibri-midword-repro.test.ts > repro: Calibri 3-col fit mid-word wrap (user dump) > never soft-breaks an oversized token mid-glyph (place whole or skip slot) 2ms
+   ΓåÆ ["il ","mercato ","di ","quest'an","no si e ","incentra","to"]: expected [ '"quest\'an" || "no si e "', ΓÇª(1) ] to deeply equal []
+node.exe : 
+In riga:1 car:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ» Failed Tests 2 ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»
+
+ FAIL  tests/text-layout-calibri-midword-repro.test.ts > repro: Calibri 3-col fit mid-word wrap (user dump) > Unicode 
+blank separators must not cause mid-word soft-breaks (user-dump signature)
+AssertionError: ["\"suΓáÇl'unicoΓáÇattaccanteΓáÇcheΓáÇef\" || 
+\"fettivamenteΓáÇsegner├áΓáÇnellaΓáÇs\"","\"ltaΓáÇgi├áΓáÇinfortunato...ΓáÇOpsΓáÇq\" || 
+\"uestoΓáÇforseΓáÇnonΓáÇ├¿ΓáÇvero!ΓáÇPerΓáÇ\"","\"ttiveΓáÇrinunciandoΓáÇaiΓáÇcaposal\" || 
+\"diΓáÇdellaΓáÇnostraΓáÇdifesaΓáÇdelΓáÇp\"","\"ΓáÇvorreiΓáÇrisultareΓáÇprovocator\" || 
+\"ioΓáÇmaΓáÇpensereiΓáÇgi├áΓáÇaΓáÇcomeΓáÇin\""]: expected [ ΓÇª(4) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "\"suΓáÇl'unicoΓáÇattaccanteΓáÇcheΓáÇef\" || \"fettivamenteΓáÇsegner├áΓáÇnellaΓáÇs\"",
++   "\"ltaΓáÇgi├áΓáÇinfortunato...ΓáÇOpsΓáÇq\" || \"uestoΓáÇforseΓáÇnonΓáÇ├¿ΓáÇvero!ΓáÇPerΓáÇ\"",
++   "\"ttiveΓáÇrinunciandoΓáÇaiΓáÇcaposal\" || \"diΓáÇdellaΓáÇnostraΓáÇdifesaΓáÇdelΓáÇp\"",
++   "\"ΓáÇvorreiΓáÇrisultareΓáÇprovocator\" || \"ioΓáÇmaΓáÇpensereiΓáÇgi├áΓáÇaΓáÇcomeΓáÇin\"",
++ ]
+
+ Γ¥» tests/text-layout-calibri-midword-repro.test.ts:108:52
+    106|       sample: texts.slice(8, 16),
+    107|     })
+    108|     expect(mids, JSON.stringify(mids.slice(0, 6))).toEqual([])
+       |                                                    ^
+    109|     expect(fitted.hadSoftBreak).toBeFalsy()
+    110|   })
+
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»[1/2]ΓÄ»
+
+ FAIL  tests/text-layout-calibri-midword-repro.test.ts > repro: Calibri 3-col fit mid-word wrap (user dump) > never 
+soft-breaks an oversized token mid-glyph (place whole or skip slot)
+AssertionError: ["il ","mercato ","di ","quest'an","no si e ","incentra","to"]: expected [ '"quest\'an" || "no si e 
+"', ΓÇª(1) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "\"quest'an\" || \"no si e \"",
++   "\"incentra\" || \"to\"",
++ ]
+
+ Γ¥» tests/text-layout-calibri-midword-repro.test.ts:137:65
+    135|       mids,
+    136|     })
+    137|     expect(mids, JSON.stringify(laid.lines.map((l) => l.text))).toEquaΓÇª
+       |                                                                 ^
+    138|     expect(laid.hadSoftBreak).toBeFalsy()
+    139|   })
+
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»[2/2]ΓÄ»
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 3 passed (5)
+   Start at  11:04:42
+   Duration  1.62s (transform 116ms, setup 176ms, collect 213ms, tests 89ms, environment 642ms, prepare 177ms)
+
+
+======== RED: newline/run paint drift (real Calibri mid-word cause) 2026-10-14T11:56:21.6687853+02:00 ========
+Layout line.text is clean; painted runs mid-word after \\n in body/joins.
+soft-break removal was the wrong lever — offsets into runs include newlines that layout skips.
+
+ RUN  v3.2.7 E:/Projects/OpenPages/packages/open-pages
+
+stdout | tests/text-layout-newline-run-drift.test.ts > repro: newline in body vs inline-run paint drift > visible plain must match runs even when body contains \n
+{
+  visibleLen: 301,
+  runLen: 303,
+  drift: -2,
+  newlineInRuns: true,
+  newlineInVisible: false
+}
+
+stdout | tests/text-layout-newline-run-drift.test.ts > repro: newline in body vs inline-run paint drift > painted run slices must not mid-word-wrap when body has \n (user dump)
+{
+  midLines: [],
+  midPaint: [
+    '" e Mister Ing: ┬½Dire" || "i una partenza a rot"',
+    '"a partenza a rotto d" || "i culo.... Del resto"',
+    '". Del resto la class" || "e non ├¿ acqua e nemm"',
+    '"cqua e nemmeno sborr" || "a .."'
+  ],
+  samplePaint: [
+    'preparazione estiva volta a ',
+    'prendere almeno tre gol a ',
+    'partita.┬╗',
+    'I Zoticoni 2 - 1 IL BOT',
+    'Mister Sandrino e Marchino: ┬½Ma ',
+    'che dire, il mercato di ',
+    "quest'anno si ├¿ incentrato ",
+    "completamente su l'unico "
+  ],
+  sampleLine: [
+    'preparazione estiva volta a ',
+    'prendere almeno tre gol a ',
+    'partita.┬╗',
+    'I Zoticoni 2 - 1 IL BOT',
+    'Mister Sandrino e Marchino: ┬½Ma ',
+    'che dire, il mercato di ',
+    "quest'anno si ├¿ incentrato ",
+    "completamente su l'unico "
+  ]
+}
+
+ ├ù tests/text-layout-newline-run-drift.test.ts > repro: newline in body vs inline-run paint drift > visible plain must match runs even when body contains \n 23ms
+   ΓåÆ runs must match visible plain (no \n drift): expected 'Rapid Peto FK 2 - 3 Cariatidi On The ΓÇª' to be 'Rapid Peto FK 2 - 3 Cariatidi On The ΓÇª' // Object.is equality
+ ├ù tests/text-layout-newline-run-drift.test.ts > repro: newline in body vs inline-run paint drift > painted run slices must not mid-word-wrap when body has \n (user dump) 14ms
+   ΓåÆ ["\" e Mister Ing: ┬½Dire\" || \"i una partenza a rot\"","\"a partenza a rotto d\" || \"i culo.... Del resto\"","\". Del resto la class\" || \"e non ├¿ acqua e nemm\"","\"cqua e nemmeno sborr\" || \"a ..\""]: expected [ ΓÇª(4) ] to deeply equal []
+node.exe : 
+In riga:1 car:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ» Failed Tests 2 ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»
+
+ FAIL  tests/text-layout-newline-run-drift.test.ts > repro: newline in body vs inline-run paint drift > visible plain 
+must match runs even when body contains \n
+AssertionError: runs must match visible plain (no \n drift): expected 'Rapid Peto FK 2 - 3 Cariatidi On The ΓÇª' to be 
+'Rapid Peto FK 2 - 3 Cariatidi On The ΓÇª' // Object.is equality
+
+- Expected
++ Received
+
+- Rapid Peto FK 2 - 3 Cariatidi On The RoadMister Torluccio: ┬½Raccogliamo i risultati di una entusiastica 
+preparazione estiva.┬╗I Zoticoni 2 - 1 IL BOTMister Sandrino e Marchino: ┬½Ma che dire, il mercato di quest'anno si ├¿ 
+incentrato completamente su l'unico attaccante.┬╗Mister Doc: ┬½Direi una partenza.┬╗
++ Rapid Peto FK 2 - 3 Cariatidi On The RoadMister Torluccio: ┬½Raccogliamo i risultati di una entusiastica 
+preparazione estiva.┬╗I Zoticoni 2 - 1 IL BOTMister Sandrino e Marchino: ┬½Ma che dire, il mercato di quest'anno si ├¿ 
+incentrato completamente su l'unico attaccante.┬╗
++
++ Mister Doc: ┬½Direi una partenza.┬╗
+
+ Γ¥» tests/text-layout-newline-run-drift.test.ts:66:69
+     64|       newlineInVisible: visible.includes('\n'),
+     65|     })
+     66|     expect(runText, 'runs must match visible plain (no \\n drift)').toΓÇª
+       |                                                                     ^
+     67|   })
+     68| 
+
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»[1/2]ΓÄ»
+
+ FAIL  tests/text-layout-newline-run-drift.test.ts > repro: newline in body vs inline-run paint drift > painted run 
+slices must not mid-word-wrap when body has \n (user dump)
+AssertionError: ["\" e Mister Ing: ┬½Dire\" || \"i una partenza a rot\"","\"a partenza a rotto d\" || \"i culo.... Del 
+resto\"","\". Del resto la class\" || \"e non ├¿ acqua e nemm\"","\"cqua e nemmeno sborr\" || \"a ..\""]: expected [ 
+ΓÇª(4) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "\" e Mister Ing: ┬½Dire\" || \"i una partenza a rot\"",
++   "\"a partenza a rotto d\" || \"i culo.... Del resto\"",
++   "\". Del resto la class\" || \"e non ├¿ acqua e nemm\"",
++   "\"cqua e nemmeno sborr\" || \"a ..\"",
++ ]
+
+ Γ¥» tests/text-layout-newline-run-drift.test.ts:105:60
+    103|     })
+    104|     // Layout tokens may be fine; the user-visible bug is the PAINTED ΓÇª
+    105|     expect(midPaint, JSON.stringify(midPaint.slice(0, 8))).toEqual([])
+       |                                                            ^
+    106|     expect(midLines).toEqual([])
+    107|   })
+
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»[2/2]ΓÄ»
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed (2)
+   Start at  11:55:51
+   Duration  1.87s (transform 120ms, setup 190ms, collect 225ms, tests 39ms, environment 764ms, prepare 289ms)
+
+
+======== RED: PDF page scale on small viewers 2026-10-16T07:47:39.2701132+02:00 ========
+MediaBox uses CSS px as PDF points (794x1123 instead of ~595.5x842.25).
+Image /Width /Height uses CSS box, not JPEG SOF pixels (breaks with pixelRatio:2).
+
+ RUN  v3.2.7 E:/Projects/OpenPages/packages/open-pages
+
+stdout | tests/pdf-page-scale.test.ts > pdf export page scale (fixed size on any viewer) > declares image Width/Height matching JPEG pixels (not CSS box)
+{
+  jpegW: 2,
+  jpegH: 1,
+  cssW: 1,
+  cssH: 1,
+  img: { width: 1, height: 1 },
+  mediaBox: [ 0, 0, 1, 1 ]
+}
+
+stdout | tests/pdf-page-scale.test.ts > pdf export page scale (fixed size on any viewer) > MediaBox uses PDF points (72dpi) for CSS px page so A4 stays A4 on phones
+{ box: [ 0, 0, 794, 1123 ], expected: [ 0, 0, 595.5, 842.25 ] }
+
+ ├ù tests/pdf-page-scale.test.ts > pdf export page scale (fixed size on any viewer) > declares image Width/Height matching JPEG pixels (not CSS box) 15ms
+   ΓåÆ Image /Width must be JPEG pixel width: expected 1 to be 2 // Object.is equality
+ ├ù tests/pdf-page-scale.test.ts > pdf export page scale (fixed size on any viewer) > MediaBox uses PDF points (72dpi) for CSS px page so A4 stays A4 on phones 2ms
+   ΓåÆ expected 794 to be close to 595.5, received difference is 198.5, but expected 0.000005
+node.exe : 
+In riga:1 car:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ» Failed Tests 2 ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»
+
+ FAIL  tests/pdf-page-scale.test.ts > pdf export page scale (fixed size on any viewer) > declares image Width/Height 
+matching JPEG pixels (not CSS box)
+AssertionError: Image /Width must be JPEG pixel width: expected 1 to be 2 // Object.is equality
+
+- Expected
++ Received
+
+- 2
++ 1
+
+ Γ¥» tests/pdf-page-scale.test.ts:71:64
+     69|     // eslint-disable-next-line no-console
+     70|     console.log({ jpegW, jpegH, cssW, cssH, img, mediaBox: mediaBoxOf(ΓÇª
+     71|     expect(img.width, 'Image /Width must be JPEG pixel width').toBe(jpΓÇª
+       |                                                                ^
+     72|     expect(img.height, 'Image /Height must be JPEG pixel height').toBeΓÇª
+     73|   })
+
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»[1/2]ΓÄ»
+
+ FAIL  tests/pdf-page-scale.test.ts > pdf export page scale (fixed size on any viewer) > MediaBox uses PDF points 
+(72dpi) for CSS px page so A4 stays A4 on phones
+AssertionError: expected 794 to be close to 595.5, received difference is 198.5, but expected 0.000005
+ Γ¥» tests/pdf-page-scale.test.ts:87:20
+     85|     expect(box[0]).toBe(0)
+     86|     expect(box[1]).toBe(0)
+     87|     expect(box[2]).toBeCloseTo(pt(cssW), 5)
+       |                    ^
+     88|     expect(box[3]).toBeCloseTo(pt(cssH), 5)
+     89|     // Must NOT treat CSS px as PDF points (that makes the "paper" ~33ΓÇª
+
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»[2/2]ΓÄ»
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed (2)
+   Start at  07:47:21
+   Duration  12.23s (transform 229ms, setup 333ms, collect 689ms, tests 19ms, environment 9.56s, prepare 1.00s)
+

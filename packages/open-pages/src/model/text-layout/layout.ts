@@ -46,6 +46,8 @@ export interface LayoutTextFrameResult {
   lines: LaidOutLine[]
   overflow: boolean
   contentBottom: number
+  /** True when a token was split mid-glyph to fit a slot (fit-to-frame should shrink). */
+  hadSoftBreak?: boolean
 }
 
 interface BlockStyle {
@@ -139,6 +141,15 @@ function advanceToNextColumn(slots: LineSlot[], si: number): number {
   return i
 }
 
+function maxSlotWidthFrom(slots: LineSlot[], from: number): number {
+  let max = 0
+  for (let i = from; i < slots.length; i++) {
+    const w = slots[i]?.width ?? 0
+    if (w > max) max = w
+  }
+  return max
+}
+
 function fillSlot(
   slot: LineSlot,
   tokens: string[],
@@ -147,7 +158,10 @@ function fillSlot(
   measure: MeasureFn,
   runsAt?: (from: number, to: number) => InlineRun[] | undefined,
   plainStart = 0,
-): { text: string; next: number; skippedSpaces: string } {
+  /** When set, skip an oversized token if a wider slot remains (e.g. past runaround). */
+  slots?: LineSlot[],
+  slotIndex = 0,
+): { text: string; next: number; skippedSpaces: string; softBreak: boolean } {
   let i = start
   // Soft-wrap / indent spaces must stay in the model even when they are not
   // painted at the start of a line — otherwise model offsets drift vs plainTextOf.
@@ -158,8 +172,8 @@ function fillSlot(
     skippedSpaces += lead
     i++
   }
-  if (i >= tokens.length) return { text: '', next: i, skippedSpaces }
-  if (isControlToken(tokens[i])) return { text: '', next: i, skippedSpaces }
+  if (i >= tokens.length) return { text: '', next: i, skippedSpaces, softBreak: false }
+  if (isControlToken(tokens[i])) return { text: '', next: i, skippedSpaces, softBreak: false }
 
   const widthOf = (s: string) =>
     measurePlainPrefix(s, s.length, measure, style, runsAt?.(plainStart, plainStart + s.length))
@@ -171,26 +185,36 @@ function fillSlot(
     const nextWidth = widthOf(text + tok)
     if (text && nextWidth > slot.width + 0.01) break
     if (!text && widthOf(tok) > slot.width + 0.01) {
-      let slice = ''
-      for (const ch of tok) {
-        if (widthOf(slice + ch) > slot.width + 0.01 && slice) break
-        slice += ch
+      // Prefer a wider remaining segment over forcing an oversized word into a
+      // narrow gutter. Never mid-glyph soft-break — place the whole token.
+      if (slots && slot.width + 0.01 < maxSlotWidthFrom(slots, slotIndex)) {
+        return { text: '', next: start, skippedSpaces: '', softBreak: false }
       }
-      if (!slice) slice = tok[0] ?? ''
-      const rest = tok.slice(slice.length)
-      tokens.splice(i, 1, ...(rest ? [slice, rest] : [slice]))
-      text = slice
+      text = tok
       i++
       break
     }
     text += tok
     i++
   }
-  return { text, next: i, skippedSpaces }
+  return { text, next: i, skippedSpaces, softBreak: false }
+}
+
+function maxRunFontSize(runs: InlineRun[] | undefined, fallback: number): number {
+  let max = fallback
+  if (!runs?.length) return max
+  for (const run of runs) {
+    if (run.fontSize != null && run.fontSize > max) max = run.fontSize
+  }
+  return max
 }
 
 export function layoutTextFrame(input: LayoutTextFrameInput): LayoutTextFrameResult {
-  const lineHeightPx = Math.max(1, input.fontSize * input.lineHeight)
+  // Slot band height must track the largest ink on the frame (absolute inline
+  // font-size included). Otherwise fit-to-frame can grow the base size while
+  // huge spans still soft-break mid-word into many short, under-tall lines.
+  const bandFontSize = maxRunFontSize(input.inlineRuns, input.fontSize)
+  const lineHeightPx = Math.max(1, bandFontSize * input.lineHeight)
   const baseStyle: TextMeasureStyle = {
     fontFamily: input.fontFamily ?? 'Georgia, serif',
     fontSize: input.fontSize,
@@ -214,6 +238,7 @@ export function layoutTextFrame(input: LayoutTextFrameInput): LayoutTextFrameRes
   let blockStyle: BlockStyle | null = null
   let pendingListMarker: string | null = null
   let emittedPlain = 0
+  let hadSoftBreak = false
   const inlineRuns = input.inlineRuns
   const runsAt = inlineRuns?.length
     ? (from: number, to: number) => sliceInlineRuns(inlineRuns, from, to)
@@ -291,7 +316,7 @@ export function layoutTextFrame(input: LayoutTextFrameInput): LayoutTextFrameRes
       }
       return lines.length > 0 ? spaces.length : 0
     })()
-    const { text, next, skippedSpaces } = fillSlot(
+    const { text, next, skippedSpaces, softBreak } = fillSlot(
       slot,
       tokens,
       ti,
@@ -299,7 +324,10 @@ export function layoutTextFrame(input: LayoutTextFrameInput): LayoutTextFrameRes
       input.measure,
       runsAt,
       emittedPlain + skipLead,
+      slots,
+      si,
     )
+    if (softBreak) hadSoftBreak = true
     if (next === ti) {
       si++
       continue
@@ -371,5 +399,5 @@ export function layoutTextFrame(input: LayoutTextFrameInput): LayoutTextFrameRes
   const overflow = ti < tokens.length
   const contentBottom =
     lines.length === 0 ? 0 : Math.max(...lines.map((l) => l.y + l.height - input.host.y))
-  return { lines, overflow, contentBottom }
+  return { lines, overflow, contentBottom, hadSoftBreak }
 }

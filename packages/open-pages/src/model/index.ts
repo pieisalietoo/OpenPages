@@ -34,6 +34,7 @@ export {
   applyCatalogFontSelection,
   BUILTIN_FONTS,
   createFontCatalog,
+  ensureOpenPagesFontsReady,
   faceNameForFont,
   fontWeightIsBold,
   loadOpenPagesFonts,
