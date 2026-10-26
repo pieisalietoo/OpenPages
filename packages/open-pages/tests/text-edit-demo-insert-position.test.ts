@@ -6,6 +6,7 @@ import { createDocument } from '../src/model/document'
 import { createHtmlShowcaseDocument } from '../src/model/html-showcase-demo'
 import { addTextSection } from '../src/model/section'
 import { plainTextOf } from '../src/model/text-edit/plain-offset'
+import { lineFontSizePx } from '../src/model/text-layout/dom-hit'
 import { createCanvasMeasurer } from '../src/model/text-layout/measure'
 
 /**
@@ -86,7 +87,7 @@ describe('demo WYSIWYG insert position (showcase + newspaper)', () => {
     const showAt = text.indexOf('show')
     expect(showAt).toBeGreaterThanOrEqual(0)
 
-    const fontSize = Number.parseFloat(el.style.fontSize) || body.fontSize
+    const fontSize = lineFontSizePx(el, body.fontSize)
     // Aim at the middle of "show" so canvas snap cannot fall back onto the preceding space.
     const intoShow = showAt + 2
     const prefixW = measurePrefixWidth(text, intoShow, fontSize)
@@ -141,7 +142,7 @@ describe('demo WYSIWYG insert position (showcase + newspaper)', () => {
     expect(text.startsWith('Evening')).toBe(true)
     const endEve = 'Evening'.length
 
-    const fontSize = Number.parseFloat(el.style.fontSize) || body.fontSize * 1.25
+    const fontSize = lineFontSizePx(el, body.fontSize * 1.25)
     const prefixW = measurePrefixWidth(text, endEve, fontSize, true)
     const glyph = measurePrefixWidth('g', 1, fontSize, true)
     const rect = el.getBoundingClientRect()

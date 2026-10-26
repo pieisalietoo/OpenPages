@@ -5,6 +5,7 @@ import OpenPagesRenderer from '../src/components/OpenPagesRenderer.vue'
 import { createHtmlShowcaseDocument } from '../src/model/html-showcase-demo'
 import { plainTextOf } from '../src/model/text-edit/plain-offset'
 import { type CaretAffinity, caretRectForOffset } from '../src/model/text-layout/caret'
+import { lineFontSizePx } from '../src/model/text-layout/dom-hit'
 import { createCanvasMeasurer, createFixedMeasurer } from '../src/model/text-layout/measure'
 import { withModelOffsets } from './helpers/model-offsets'
 import { listGutterPx } from './helpers/wysiwyg-harness'
@@ -109,7 +110,7 @@ describe('HTML Showcase EOL caret + word select', () => {
     const el = line.element as HTMLElement
     const text = el.textContent ?? ''
     const rect = el.getBoundingClientRect()
-    const fontSize = Number.parseFloat(el.style.fontSize) || 16
+    const fontSize = lineFontSizePx(el, 16)
     const measure = createCanvasMeasurer()
     const textW = measure(text, {
       fontFamily: el.style.fontFamily || 'Georgia, serif',
@@ -176,7 +177,7 @@ describe('HTML Showcase EOL caret + word select', () => {
     const twoAt = text.lastIndexOf('two')
     expect(twoAt).toBeGreaterThanOrEqual(0)
     const rect = el.getBoundingClientRect()
-    const fontSize = Number.parseFloat(el.style.fontSize) || 16
+    const fontSize = lineFontSizePx(el, 16)
     const measure = createCanvasMeasurer()
     const intoTwo = measure(text.slice(0, twoAt + 1), {
       fontFamily: el.style.fontFamily || 'Georgia, serif',
