@@ -1,1 +1,17 @@
 ﻿
+
+======== GREEN: inline remote catalog fonts to data: before html-to-image 2026-10-29T11:48:20.5708259+01:00 ========
+
+ RUN  v3.2.7 E:/Projects/OpenPages/packages/open-pages
+
+ ✓ tests/export-font-embed.test.ts > export embeds catalog custom fonts > fontEmbedCSSFromFonts builds @font-face rules from catalog sources 3ms
+ ✓ tests/export-font-embed.test.ts > export embeds catalog custom fonts > toPng passes fontEmbedCSS so html-to-image can paint custom faces 2ms
+ ✓ tests/export-font-embed.test.ts > export embeds catalog custom fonts > toJpeg (pdf/print raster) also receives fontEmbedCSS 1ms
+ ✓ tests/export-font-inline.test.ts > export inlines remote catalog fonts for html-to-image > toJpeg fontEmbedCSS uses data: URLs for remote Bodoni/Calibri sources 6ms
+ ✓ tests/export-font-inline.test.ts > export inlines remote catalog fonts for html-to-image > toPng fontEmbedCSS likewise inlines remote sources as data: URLs 1ms
+
+ Test Files  2 passed (2)
+      Tests  5 passed (5)
+   Start at  11:48:05
+   Duration  3.21s (transform 333ms, setup 707ms, collect 452ms, tests 15ms, environment 2.15s, prepare 605ms)
+

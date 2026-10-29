@@ -241,9 +241,57 @@ function escapeCssUrl(url: string): string {
   return url.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
 }
 
+function mimeTypeForFontSource(source: string, contentType: string | null): string {
+  const header = contentType?.split(';')[0]?.trim().toLowerCase()
+  if (header?.startsWith('font/') || header?.startsWith('application/font')) return header
+  const s = source.toLowerCase()
+  if (s.includes('woff2') || s.startsWith('data:font/woff2')) return 'font/woff2'
+  if (s.includes('woff') || s.startsWith('data:font/woff')) return 'font/woff'
+  if (s.includes('.otf') || s.startsWith('data:font/otf')) return 'font/otf'
+  if (s.includes('.ttf') || s.startsWith('data:font/ttf')) return 'font/ttf'
+  return 'font/woff'
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = ''
+  for (let i = 0; i < bytes.length; i++) {
+    const byte = bytes[i]
+    if (byte === undefined) continue
+    binary += String.fromCharCode(byte)
+  }
+  return btoa(binary)
+}
+
+const inlinedFontSourceCache = new Map<string, Promise<string>>()
+
+/**
+ * html-to-image uses `fontEmbedCSS` as-is and does not fetch remote `url()`.
+ * Resolve http(s) catalog sources to `data:` so the SVG raster can paint faces.
+ */
+export async function inlineFontSource(source: string): Promise<string> {
+  if (source.startsWith('data:')) return source
+  if (!/^https?:\/\//i.test(source)) return source
+
+  let pending = inlinedFontSourceCache.get(source)
+  if (!pending) {
+    pending = (async () => {
+      const response = await fetch(source)
+      if (!response.ok) {
+        throw new Error(`font fetch failed (${response.status}): ${source}`)
+      }
+      const bytes = new Uint8Array(await response.arrayBuffer())
+      const mime = mimeTypeForFontSource(source, response.headers.get('content-type'))
+      return `data:${mime};base64,${bytesToBase64(bytes)}`
+    })()
+    inlinedFontSourceCache.set(source, pending)
+  }
+  return pending
+}
+
 /**
  * Build `@font-face` CSS for catalog entries that declare `source`.
  * html-to-image only embeds stylesheet / fontEmbedCSS faces — not FontFace API alone.
+ * Prefer `fontEmbedCSSFromFontsInlined` for capture so remote sources become `data:`.
  */
 export function fontEmbedCSSFromFonts(fonts: OpenPagesFont[]): string {
   const rules: string[] = []
@@ -260,8 +308,25 @@ export function fontEmbedCSSFromFonts(fonts: OpenPagesFont[]): string {
   return rules.join('\n')
 }
 
-function captureOpts(fonts?: () => OpenPagesFont[]) {
-  const fontEmbedCSS = fontEmbedCSSFromFonts(fonts?.() ?? [])
+/** Like `fontEmbedCSSFromFonts`, but remote `source` URLs are fetched and inlined. */
+export async function fontEmbedCSSFromFontsInlined(fonts: OpenPagesFont[]): Promise<string> {
+  const rules: string[] = []
+  for (const font of fonts) {
+    if (!font.source) continue
+    const source = await inlineFontSource(font.source)
+    const family = faceNameForFont(font).replace(/'/g, "\\'")
+    const weight = font.weight ?? 'normal'
+    const style = font.style ?? 'normal'
+    const format = cssFormatForFontSource(source)
+    rules.push(
+      `@font-face { font-family: '${family}'; src: url("${escapeCssUrl(source)}") format('${format}'); font-weight: ${weight}; font-style: ${style}; }`,
+    )
+  }
+  return rules.join('\n')
+}
+
+async function captureOpts(fonts?: () => OpenPagesFont[]) {
+  const fontEmbedCSS = await fontEmbedCSSFromFontsInlined(fonts?.() ?? [])
   return fontEmbedCSS ? { ...captureOptions, fontEmbedCSS } : { ...captureOptions }
 }
 
@@ -269,14 +334,14 @@ async function defaultCapturePng(
   element: HTMLElement,
   fonts?: () => OpenPagesFont[],
 ): Promise<string> {
-  return toPng(element, captureOpts(fonts))
+  return toPng(element, await captureOpts(fonts))
 }
 
 async function defaultCaptureJpeg(
   element: HTMLElement,
   fonts?: () => OpenPagesFont[],
 ): Promise<string> {
-  return toJpeg(element, { ...captureOpts(fonts), quality: 0.92 })
+  return toJpeg(element, { ...(await captureOpts(fonts)), quality: 0.92 })
 }
 
 export async function printPageImage(payload: PrintPagePayload): Promise<void> {

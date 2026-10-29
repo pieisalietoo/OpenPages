@@ -9,6 +9,8 @@ export {
   createBrowserExportAdapters,
   createExporter,
   fontEmbedCSSFromFonts,
+  fontEmbedCSSFromFontsInlined,
+  inlineFontSource,
   jpegBytesToPdfDataUrl,
   readJpegPixelSize,
 } from './exporters'

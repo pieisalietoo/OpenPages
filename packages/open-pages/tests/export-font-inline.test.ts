@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 /**
  * Repro: PDF/PNG export paints generic sans instead of catalog custom faces
@@ -86,6 +86,31 @@ describe('export inlines remote catalog fonts for html-to-image', () => {
   beforeEach(() => {
     toPngMock.mockClear()
     toJpegMock.mockClear()
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input)
+        const bytes = new Uint8Array([0x00, 0x01, 0x02, 0x03])
+        const contentType = url.includes('.ttf')
+          ? 'font/ttf'
+          : url.includes('woff2')
+            ? 'font/woff2'
+            : 'font/woff'
+        return {
+          ok: true,
+          status: 200,
+          headers: {
+            get: (name: string) => (name.toLowerCase() === 'content-type' ? contentType : null),
+          },
+          arrayBuffer: async () =>
+            bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
+        }
+      }),
+    )
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
 
   it('toJpeg fontEmbedCSS uses data: URLs for remote Bodoni/Calibri sources', async () => {
