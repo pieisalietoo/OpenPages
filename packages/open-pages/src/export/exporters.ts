@@ -104,7 +104,55 @@ function dataUrlToBytes(dataUrl: string): Uint8Array {
   return bytes
 }
 
-/** Minimal PDF-1.4 embedding a JPEG (does not use window.print). */
+/** CSS px @ 96dpi → PDF user units (1/72"). */
+function cssPxToPdfPt(px: number): number {
+  return (px * 72) / 96
+}
+
+/** Baseline JPEG SOF0/SOF1/SOF2 pixel size (for /Width /Height on the XObject). */
+export function readJpegPixelSize(bytes: Uint8Array): { width: number; height: number } {
+  if (bytes[0] !== 0xff || bytes[1] !== 0xd8) {
+    throw new Error('not a jpeg')
+  }
+  let i = 2
+  while (i < bytes.length - 8) {
+    if (bytes[i] !== 0xff) {
+      i++
+      continue
+    }
+    const marker = bytes[i + 1]
+    if (marker === undefined) break
+    if (marker === 0xc0 || marker === 0xc1 || marker === 0xc2) {
+      const hHi = bytes[i + 5]
+      const hLo = bytes[i + 6]
+      const wHi = bytes[i + 7]
+      const wLo = bytes[i + 8]
+      if (hHi === undefined || hLo === undefined || wHi === undefined || wLo === undefined) break
+      return { width: (wHi << 8) | wLo, height: (hHi << 8) | hLo }
+    }
+    if (marker === 0xd8) {
+      i += 2
+      continue
+    }
+    if (marker === 0xd9 || marker === 0xda) break
+    const lenHi = bytes[i + 2]
+    const lenLo = bytes[i + 3]
+    if (lenHi === undefined || lenLo === undefined) break
+    i += 2 + ((lenHi << 8) | lenLo)
+  }
+  throw new Error('JPEG SOF not found')
+}
+
+function pdfNumber(n: number): string {
+  if (Number.isInteger(n)) return String(n)
+  return String(Math.round(n * 10000) / 10000)
+}
+
+/**
+ * Minimal PDF-1.4 embedding a JPEG (does not use window.print).
+ * `widthPx`/`heightPx` are the CSS page box; MediaBox is in PDF points.
+ * Image /Width /Height follow the JPEG SOF (e.g. css × pixelRatio).
+ */
 export function jpegBytesToPdfDataUrl(jpeg: Uint8Array, widthPx: number, heightPx: number): string {
   const encoder = new TextEncoder()
   const chunks: Uint8Array[] = []
@@ -121,7 +169,10 @@ export function jpegBytesToPdfDataUrl(jpeg: Uint8Array, widthPx: number, heightP
     size += bytes.length
   }
 
-  const content = `q ${widthPx} 0 0 ${heightPx} 0 0 cm /Im0 Do Q`
+  const { width: imgW, height: imgH } = readJpegPixelSize(jpeg)
+  const pageW = pdfNumber(cssPxToPdfPt(Math.max(1, widthPx)))
+  const pageH = pdfNumber(cssPxToPdfPt(Math.max(1, heightPx)))
+  const content = `q ${pageW} 0 0 ${pageH} 0 0 cm /Im0 Do Q`
   const offsets: number[] = []
 
   pushStr('%PDF-1.4\n')
@@ -142,12 +193,12 @@ export function jpegBytesToPdfDataUrl(jpeg: Uint8Array, widthPx: number, heightP
   writeObj(2, '<< /Type /Pages /Kids [3 0 R] /Count 1 >>')
   writeObj(
     3,
-    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${widthPx} ${heightPx}] /Contents 4 0 R /Resources << /XObject << /Im0 5 0 R >> >> >>`,
+    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageW} ${pageH}] /Contents 4 0 R /Resources << /XObject << /Im0 5 0 R >> >> >>`,
   )
   writeObj(4, `<< /Length ${content.length} >>\nstream\n${content}\nendstream`)
   writeObj(
     5,
-    `<< /Type /XObject /Subtype /Image /Width ${widthPx} /Height ${heightPx} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpeg.length} >>\nstream\n`,
+    `<< /Type /XObject /Subtype /Image /Width ${imgW} /Height ${imgH} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpeg.length} >>\nstream\n`,
     jpeg,
   )
 

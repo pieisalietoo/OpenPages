@@ -10,4 +10,5 @@ export {
   createExporter,
   fontEmbedCSSFromFonts,
   jpegBytesToPdfDataUrl,
+  readJpegPixelSize,
 } from './exporters'

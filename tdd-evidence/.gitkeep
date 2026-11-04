@@ -1,0 +1,2 @@
+# Keep this directory tracked. Evidence files are reset after each inter-step commit.
+# See docs/agentic-tdd-workflow.md § TDD evidence logs.

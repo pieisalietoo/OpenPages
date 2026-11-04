@@ -1,0 +1,110 @@
+
+======== RED: image settings toolbar (URL + upload) 2026-11-04T22:18:55.6142703+01:00 ========
+
+ RUN  v3.2.7 E:/Projects/OpenPages/packages/open-pages
+
+ ? tests/image-settings.test.ts (5 tests | 5 failed) 186ms
+   × image settings tool + updateImageSection > updateImageSection patches src, alt, and fit on image sections only 9ms
+     ? (0 , updateImageSection) is not a function
+   × image settings tool + updateImageSection > shows section.image only for a single selected image 7ms
+     ? expected [ 'section.style', …(9) ] to include 'section.image'
+   × image settings tool + updateImageSection > lists section.image in the default selection toolbar order 1ms
+     ? expected [ 'section.style', …(14) ] to include 'section.image'
+   × image settings tool + updateImageSection > opens image settings popover and applies a URL 110ms
+     ? expected false to be true // Object.is equality
+   × image settings tool + updateImageSection > uploads a local image file from the settings popover 56ms
+     ? Unable to get [data-op-tool="section.image"] within: <div class="op-shadow-host" data-op-shadow-host=""></div>
+node.exe : 
+In C:\Program Files\nodejs\pnpm.ps1:16 car:5
++     & "$basedir/node$exe"  "$basedir/node_modules/corepack/dist/pnpm. ...
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+??????? Failed Tests 5 ???????
+
+ FAIL  tests/image-settings.test.ts > image settings tool + updateImageSection > updateImageSection patches src, alt, 
+and fit on image sections only
+TypeError: (0 , updateImageSection) is not a function
+ ? tests/image-settings.test.ts:65:7
+     63| 
+     64|     expect(
+     65|       updateImageSection(page, image.id, {
+       |       ^
+     66|         src: 'https://example.com/b.png',
+     67|         alt: 'B',
+
+????????????????????????[1/5]?
+
+ FAIL  tests/image-settings.test.ts > image settings tool + updateImageSection > shows section.image only for a single 
+selected image
+AssertionError: expected [ 'section.style', …(9) ] to include 'section.image'
+ ? tests/image-settings.test.ts:84:22
+     82|       (t) => t.id,
+     83|     )
+     84|     expect(forImage).toContain('section.image')
+       |                      ^
+     85| 
+     86|     const forText = visibleSelectionTools(tools.list('selection'), [
+
+????????????????????????[2/5]?
+
+ FAIL  tests/image-settings.test.ts > image settings tool + updateImageSection > lists section.image in the default 
+selection toolbar order
+AssertionError: expected [ 'section.style', …(14) ] to include 'section.image'
+ ? tests/image-settings.test.ts:116:39
+    114| 
+    115|   it('lists section.image in the default selection toolbar order', () …
+    116|     expect(DEFAULT_SELECTION_TOOLBAR).toContain('section.image')
+       |                                       ^
+    117|   })
+    118| 
+
+????????????????????????[3/5]?
+
+ FAIL  tests/image-settings.test.ts > image settings tool + updateImageSection > opens image settings popover and 
+applies a URL
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ? tests/image-settings.test.ts:137:69
+    135| 
+    136|     await wrapper.get(`[data-op-section="${image.id}"]`).trigger('poin…
+    137|     expect(wrapper.find('[data-op-tool="section.image"]').exists()).to…
+       |                                                                     ^
+    138| 
+    139|     await wrapper.get('[data-op-tool="section.image"]').trigger('click…
+
+????????????????????????[4/5]?
+
+ FAIL  tests/image-settings.test.ts > image settings tool + updateImageSection > uploads a local image file from the 
+settings popover
+Error: Unable to get [data-op-tool="section.image"] within: <div class="op-shadow-host" data-op-shadow-host=""></div>
+ ? VueWrapper.get ../../node_modules/.pnpm/@vue+test-utils@2.5.1_@vue+_9d1b738f439a9ca913020b8740b94e9f/node_modules/@v
+ue/test-utils/dist/vue-test-utils.cjs.js:7333:15
+    7331|             return result;
+    7332|         }
+    7333|         throw new Error(`Unable to get ${selector} within: ${this.html…
+       |               ^
+    7334|     }
+    7335|     getComponent(selector) {
+ ? VueWrapper.get tests/setup-shadow.ts:37:17
+ ? tests/image-settings.test.ts:168:19
+
+????????????????????????[5/5]?
+
+
+ Test Files  1 failed (1)
+      Tests  5 failed (5)
+   Start at  22:18:38
+   Duration  16.07s (transform 1.57s, setup 461ms, collect 3.19s, tests 186ms, environment 10.27s, prepare 1.23s)
+
+Error: ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL
+
+  × "pnpm recursive exec" failed in E:\Projects\OpenPages\packages\open-pages
+

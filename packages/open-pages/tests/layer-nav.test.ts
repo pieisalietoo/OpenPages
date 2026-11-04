@@ -1,18 +1,24 @@
 import { describe, expect, it } from 'vitest'
 import { createDocument } from '../src/model/document'
-import { addPanelSection, addTextSection } from '../src/model/section'
 import {
   layerBringToFront,
   layerSetHidden,
   layerSetLocked,
   listPageLayers,
 } from '../src/model/layer-nav'
+import { addPanelSection, addTextSection } from '../src/model/section'
 
 describe('A4 layer navigator API', () => {
   it('lists layers in section order and supports reorder/hidden/locked', () => {
     const doc = createDocument({ title: 'L' })
     const page = doc.pages[0]!
-    const a = addPanelSection(page, { x: 0, y: 0, width: 100, height: 100 })
+    const a = addPanelSection(page, {
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 100,
+      borderStyle: 'ink',
+    })
     const b = addTextSection(page, {
       x: 10,
       y: 10,

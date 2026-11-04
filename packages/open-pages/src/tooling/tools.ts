@@ -14,6 +14,7 @@ export type BuiltinToolId =
   | 'export.pdf'
   | 'section.style'
   | 'section.font'
+  | 'section.image'
   | 'section.columns'
   | 'section.runaround'
   | 'section.lock'
@@ -77,6 +78,7 @@ export const BUILTIN_TOOLS: ReadonlyArray<Omit<ToolDefinition, 'enabled'>> = [
   { id: 'view.magnet', scope: 'document', label: 'Magnet', icon: 'magnet' },
   { id: 'section.style', scope: 'selection', label: 'Colors', icon: 'palette' },
   { id: 'section.font', scope: 'selection', label: 'Font', icon: 'type' },
+  { id: 'section.image', scope: 'selection', label: 'Image settings', icon: 'settings' },
   { id: 'section.columns', scope: 'selection', label: 'Columns', icon: 'columns-2' },
   { id: 'section.runaround', scope: 'selection', label: 'Runaround', icon: 'text-square' },
   { id: 'section.lock', scope: 'selection', label: 'Lock', icon: 'lock' },

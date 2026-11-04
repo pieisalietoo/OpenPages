@@ -1,0 +1,12 @@
+
+======== GREEN: image settings toolbar (URL + upload) 2026-11-04T22:21:28.2443487+01:00 ========
+
+ RUN  v3.2.7 E:/Projects/OpenPages/packages/open-pages
+
+ ? tests/image-settings.test.ts (5 tests) 262ms
+
+ Test Files  1 passed (1)
+      Tests  5 passed (5)
+   Start at  22:21:15
+   Duration  4.17s (transform 1.21s, setup 215ms, collect 2.11s, tests 262ms, environment 794ms, prepare 213ms)
+

@@ -1,0 +1,13 @@
+---
+description: Minimize code volume; prefer readable short solutions over abstractions
+globs: **/*
+alwaysApply: true
+---
+
+# Minimal code
+
+- Write only what current failing tests require.
+- No optional “future” parameters, premature patterns, or speculative modules.
+- Prefer simple functions and stdlib over custom frameworks.
+- After GREEN, actively prune: remove duplication, dead branches, and noise.
+- Optimize for readability of the short solution, not for impressiveness.

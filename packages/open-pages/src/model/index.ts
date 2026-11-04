@@ -34,6 +34,7 @@ export {
   applyCatalogFontSelection,
   BUILTIN_FONTS,
   createFontCatalog,
+  ensureOpenPagesFontsReady,
   faceNameForFont,
   fontWeightIsBold,
   loadOpenPagesFonts,
@@ -45,12 +46,6 @@ export { createFontsDemoDocument } from './fonts-demo'
 export type { HistoryController } from './history'
 export { createHistory } from './history'
 export { createHtmlShowcaseDocument } from './html-showcase-demo'
-export type {
-  ApplyLayoutPresetOptions,
-  LayoutPresetId,
-  LayoutPresetInfo,
-} from './layout-presets'
-export { applyLayoutPreset, listLayoutPresets } from './layout-presets'
 export type { LayerDescriptor, PageLayers } from './layer-nav'
 export {
   layerBringForward,
@@ -61,14 +56,12 @@ export {
   layerSetLocked,
   listPageLayers,
 } from './layer-nav'
-export type { ContentTransform } from './viewport-content'
-export {
-  contentTransformCss,
-  DEFAULT_CONTENT_TRANSFORM,
-  nudgeImageContent,
-  readContentTransform,
-  setImageContentTransform,
-} from './viewport-content'
+export type {
+  ApplyLayoutPresetOptions,
+  LayoutPresetId,
+  LayoutPresetInfo,
+} from './layout-presets'
+export { applyLayoutPreset, listLayoutPresets } from './layout-presets'
 export type {
   CreateLayoutLibraryOptions,
   LayoutChangeEvent,
@@ -146,6 +139,7 @@ export type {
   HeadlineSection,
   ImageFit,
   ImageSection,
+  ImageSectionPatch,
   NudgeKey,
   PageLike,
   PanelBorderStyle,
@@ -191,6 +185,7 @@ export {
   setSectionRunaround,
   setSectionRunaroundMargins,
   ungroupSections,
+  updateImageSection,
   updateSectionStyle,
   updateTextStyle,
 } from './section'
@@ -277,3 +272,11 @@ export {
   selectionRects,
   sliceInlineRuns,
 } from './text-layout'
+export type { ContentTransform } from './viewport-content'
+export {
+  contentTransformCss,
+  DEFAULT_CONTENT_TRANSFORM,
+  nudgeImageContent,
+  readContentTransform,
+  setImageContentTransform,
+} from './viewport-content'

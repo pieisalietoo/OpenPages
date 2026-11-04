@@ -36,6 +36,7 @@ export const DEFAULT_DOCUMENT_TOOLBAR: readonly ToolbarItemId[] = [
 export const DEFAULT_SELECTION_TOOLBAR: readonly ToolbarItemId[] = [
   'section.style',
   'section.font',
+  'section.image',
   'section.columns',
   'section.runaround',
   'section.lock',

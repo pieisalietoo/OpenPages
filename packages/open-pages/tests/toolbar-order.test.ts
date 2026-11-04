@@ -128,6 +128,7 @@ describe('default toolbar orders', () => {
     expect(DEFAULT_SELECTION_TOOLBAR).toEqual([
       'section.style',
       'section.font',
+      'section.image',
       'section.columns',
       'section.runaround',
       'section.lock',

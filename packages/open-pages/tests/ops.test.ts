@@ -22,7 +22,7 @@ describe('H1 ops patch list + undo/redo', () => {
       height: 160,
     })
     expect(result.ok).toBe(true)
-    if (!result.ok) return
+    if (!result.ok || !('section' in result)) return
     expect(result.section.type).toBe('panel')
     expect(page.sections).toContain(result.section)
   })
@@ -30,7 +30,13 @@ describe('H1 ops patch list + undo/redo', () => {
   it('applyOp removeSection deletes by id', () => {
     const doc = createDocument({ title: 'Ops' })
     const page = firstPage(doc)
-    const panel = addPanelSection(page, { x: 0, y: 0, width: 100, height: 100 })
+    const panel = addPanelSection(page, {
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 100,
+      borderStyle: 'ink',
+    })
     const result = applyOp(doc, {
       type: 'removeSection',
       pageId: page.id,

@@ -176,6 +176,14 @@ export async function loadOpenPagesFonts(fonts: OpenPagesFont[]): Promise<void> 
   await Promise.all(jobs)
 }
 
+/** Load catalog faces and wait until the document can use them for measure/fit. */
+export async function ensureOpenPagesFontsReady(fonts: OpenPagesFont[]): Promise<void> {
+  await loadOpenPagesFonts(fonts)
+  if (typeof document === 'undefined') return
+  const ready = document.fonts?.ready
+  if (ready) await ready
+}
+
 export function fontWeightIsBold(weight: string | number | undefined): boolean {
   if (weight === undefined) return false
   if (typeof weight === 'number') return weight >= 600

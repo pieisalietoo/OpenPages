@@ -36,6 +36,7 @@ const TYPE_TOOLS: Partial<Record<SectionType, ToolId[]>> = {
     ),
   ],
   image: [
+    'section.image',
     'section.runaround',
     ...SINGLE_ONLY,
     ...MULTI_SHARED.filter(

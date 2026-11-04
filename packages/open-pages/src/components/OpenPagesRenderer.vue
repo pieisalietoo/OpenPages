@@ -24,7 +24,6 @@ import {
 } from '../model/fonts'
 import { relativeExclusionsForHost, runaroundZonesForHost } from '../model/runaround'
 import { sanitizePanelHtml, sanitizeTextHtml } from '../model/sanitize-html'
-import { contentTransformCss } from '../model/viewport-content'
 import {
   bumpTextSectionFonts,
   deleteSection,
@@ -81,6 +80,7 @@ import {
   selectionRects,
   snapCaretAfterEdit,
 } from '../model/text-layout'
+import { contentTransformCss } from '../model/viewport-content'
 import OpShadowRoot from './OpShadowRoot.vue'
 
 const props = withDefaults(
@@ -93,6 +93,13 @@ const props = withDefaults(
     snapEnabled?: boolean
     showHidden?: boolean
     fonts?: OpenPagesFont[]
+    /**
+     * When false, fit-to-frame is deferred (custom faces still loading).
+     * Hosts that call `ensureOpenPagesFontsReady` before mount can leave this true.
+     */
+    fontsReady?: boolean
+    /** Bump after fonts load so line layouts re-measure with final faces. */
+    fontsLayoutEpoch?: number
     i18n?: OpenPagesI18n
     /**
      * Extra CSS injected into the renderer Shadow DOM after package chrome
@@ -104,6 +111,8 @@ const props = withDefaults(
     snapEnabled: true,
     showHidden: false,
     fonts: () => BUILTIN_FONTS,
+    fontsReady: true,
+    fontsLayoutEpoch: 0,
     shadowStyles: () => [],
   },
 )
@@ -1617,6 +1626,7 @@ function layoutLines(section: Section): { lines: LaidOutLine[]; fontSize: number
 
   const html = textOf(section)
   const runs = inlineRunsFromHtml(html)
+  const fitMode = props.fontsReady === false ? 'none' : section.textFit
   const fitted = fitTextFrame({
     text: htmlToPlainText(html),
     host: { x: 0, y: 0, width: section.width, height: section.height },
@@ -1629,13 +1639,15 @@ function layoutLines(section: Section): { lines: LaidOutLine[]; fontSize: number
     fontItalic: section.fontItalic,
     exclusions,
     measure: textMeasurer,
-    mode: section.textFit,
+    mode: fitMode,
     inlineRuns: runs,
   })
   return { lines: fitted.lines, fontSize: fitted.fontSize }
 }
 
 const lineLayouts = computed(() => {
+  void props.fontsReady
+  void props.fontsLayoutEpoch
   const map = new Map<string, { lines: LaidOutLine[]; fontSize: number }>()
   for (const section of visibleSections.value) {
     if (section.type === 'text' && section.htmlMode) continue
