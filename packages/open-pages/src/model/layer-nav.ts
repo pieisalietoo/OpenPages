@@ -58,18 +58,10 @@ export function layerSendToBack(page: PageLayers, sectionId: string): boolean {
   return sendToBack(page, sectionId)
 }
 
-export function layerSetHidden(
-  page: PageLayers,
-  sectionId: string,
-  hidden: boolean,
-): boolean {
+export function layerSetHidden(page: PageLayers, sectionId: string, hidden: boolean): boolean {
   return setSectionHidden(page, sectionId, hidden)
 }
 
-export function layerSetLocked(
-  page: PageLayers,
-  sectionId: string,
-  locked: boolean,
-): boolean {
+export function layerSetLocked(page: PageLayers, sectionId: string, locked: boolean): boolean {
   return setSectionLocked(page, sectionId, locked)
 }

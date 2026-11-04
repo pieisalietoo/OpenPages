@@ -34,8 +34,11 @@ import {
 } from '../export/exporters'
 import { createI18n, type LocaleCode, type OpenPagesI18n } from '../i18n'
 import { OPEN_PAGES_I18N } from '../i18n/keys'
-import { insertImageFromSrc, readImageFileAsDataUrl } from '../model/assets'
-import { nudgeImageContent } from '../model/viewport-content'
+import {
+  createDocumentAssetAdapter,
+  insertImageFromSrc,
+  readImageFileAsDataUrl,
+} from '../model/assets'
 import {
   type OpenPagesDocument,
   parseDocument,
@@ -67,6 +70,7 @@ import {
   deleteSection,
   duplicateSection,
   groupSections,
+  type ImageFit,
   type SectionType,
   sendBackward,
   sendToBack,
@@ -76,6 +80,7 @@ import {
   setSectionRunaroundMargins,
   type TextAlign,
   ungroupSections,
+  updateImageSection,
   updateSectionStyle,
   updateTextStyle,
   type VerticalAlign,
@@ -86,6 +91,7 @@ import {
   selectSection,
   toggleSectionSelection,
 } from '../model/selection'
+import { nudgeImageContent } from '../model/viewport-content'
 import { POPOVER_MIN_WIDTH_PX, shouldAlignPopoverEnd } from '../tooling/popover-align'
 import { visibleSelectionTools } from '../tooling/selection-tools'
 import {
@@ -784,6 +790,8 @@ function togglePopover(id: ToolId) {
     prepareLayoutSaveForm()
   } else if (next === 'layout.importJson') {
     prepareLayoutImportForm()
+  } else if (next === 'section.image') {
+    syncImageSrcDraft()
   } else {
     pendingOverwrite.value = null
     pendingImportDoc.value = null
@@ -925,6 +933,7 @@ function activateTool(id: ToolId, payload?: unknown) {
     id === 'section.add' ||
     id === 'section.style' ||
     id === 'section.font' ||
+    id === 'section.image' ||
     id === 'section.columns' ||
     id === 'section.runaround'
   ) {
@@ -1174,6 +1183,50 @@ function patchSelectedTextStyle(patch: {
     updateTextStyle(currentPage.value, id, patch)
   }
   bumpDocument()
+}
+
+const imageSrcDraft = ref('')
+
+function syncImageSrcDraft() {
+  const section = primarySelected.value
+  imageSrcDraft.value = section?.type === 'image' ? section.src : ''
+}
+
+function applyImageUrl() {
+  const section = primarySelected.value
+  if (!section || section.type !== 'image') return
+  const src = imageSrcDraft.value.trim()
+  updateImageSection(currentPage.value, section.id, { src })
+  bumpDocument()
+}
+
+function onImageAltInput(raw: string) {
+  const section = primarySelected.value
+  if (!section || section.type !== 'image') return
+  updateImageSection(currentPage.value, section.id, { alt: raw })
+  bumpDocument()
+}
+
+function onImageFitChange(raw: string) {
+  const section = primarySelected.value
+  if (!section || section.type !== 'image') return
+  const fit = (raw === 'contain' || raw === 'fill' ? raw : 'cover') as ImageFit
+  updateImageSection(currentPage.value, section.id, { fit })
+  bumpDocument()
+}
+
+async function onImageFileSelected(event: Event) {
+  const section = primarySelected.value
+  if (!section || section.type !== 'image') return
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file || !file.type.startsWith('image/')) return
+  const src = await readImageFileAsDataUrl(file)
+  createDocumentAssetAdapter(props.modelValue).putImage({ src })
+  updateImageSection(currentPage.value, section.id, { src, alt: file.name })
+  imageSrcDraft.value = src
+  bumpDocument()
+  input.value = ''
 }
 
 function selectedFontId(): string {
@@ -1887,6 +1940,60 @@ defineExpose({
                       })
                     "
                   />
+                </label>
+              </div>
+            </template>
+            <template #popover-section-image>
+              <p class="op-popover-title">{{ i18n.t('editor.imageSettings') }}</p>
+              <div class="op-style-form" v-if="primarySelected && primarySelected.type === 'image'">
+                <label class="op-field">
+                  {{ i18n.t('editor.imageUrl') }}
+                  <div class="op-field-row">
+                    <input
+                      data-op-image-src
+                      type="url"
+                      :value="imageSrcDraft"
+                      @input="imageSrcDraft = ($event.target as HTMLInputElement).value"
+                    />
+                    <button
+                      type="button"
+                      class="op-save-btn"
+                      data-op-image-apply-url
+                      @click="applyImageUrl"
+                    >
+                      {{ i18n.t('editor.imageApplyUrl') }}
+                    </button>
+                  </div>
+                </label>
+                <label class="op-field">
+                  {{ i18n.t('editor.imageUpload') }}
+                  <input
+                    data-op-image-file
+                    type="file"
+                    accept="image/*"
+                    @change="onImageFileSelected"
+                  />
+                </label>
+                <label class="op-field">
+                  {{ i18n.t('editor.imageAlt') }}
+                  <input
+                    data-op-image-alt
+                    type="text"
+                    :value="primarySelected.alt"
+                    @change="onImageAltInput(($event.target as HTMLInputElement).value)"
+                  />
+                </label>
+                <label class="op-field">
+                  {{ i18n.t('editor.imageFit') }}
+                  <select
+                    data-op-image-fit
+                    :value="primarySelected.fit"
+                    @change="onImageFitChange(($event.target as HTMLSelectElement).value)"
+                  >
+                    <option value="cover">cover</option>
+                    <option value="contain">contain</option>
+                    <option value="fill">fill</option>
+                  </select>
                 </label>
               </div>
             </template>

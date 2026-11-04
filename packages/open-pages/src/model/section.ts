@@ -775,6 +775,12 @@ export type TextStylePatch = {
   verticalAlign?: VerticalAlign
 }
 
+export type ImageSectionPatch = {
+  src?: string
+  alt?: string
+  fit?: ImageFit
+}
+
 export function bumpFontSizes(sizes: number[], delta: number): number[] {
   return sizes.map((size) => Math.max(1, size + delta))
 }
@@ -841,6 +847,21 @@ export function updateTextStyle(
       patch.verticalAlign === 'middle' || patch.verticalAlign === 'bottom'
         ? patch.verticalAlign
         : 'top'
+  }
+  return true
+}
+
+export function updateImageSection(
+  page: { sections: Section[] },
+  sectionId: string,
+  patch: ImageSectionPatch,
+): boolean {
+  const section = findSection(page, sectionId)
+  if (!section || section.type !== 'image') return false
+  if (patch.src !== undefined) section.src = patch.src
+  if (patch.alt !== undefined) section.alt = patch.alt
+  if (patch.fit !== undefined) {
+    section.fit = patch.fit === 'contain' || patch.fit === 'fill' ? patch.fit : 'cover'
   }
   return true
 }

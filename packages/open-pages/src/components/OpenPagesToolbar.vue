@@ -185,6 +185,7 @@ const popoverTools = new Set<ToolId>([
   'section.add',
   'section.style',
   'section.font',
+  'section.image',
   'section.columns',
   'section.runaround',
 ])

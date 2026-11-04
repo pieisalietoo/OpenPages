@@ -132,6 +132,8 @@ describe('page setup + add + style tools', () => {
       width: 10,
       height: 10,
       borderStyle: 'ink',
+      readingIndex: 0,
+      clipContent: true,
       locked: false,
       hidden: false,
       runaround: false,

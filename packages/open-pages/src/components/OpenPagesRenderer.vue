@@ -24,7 +24,6 @@ import {
 } from '../model/fonts'
 import { relativeExclusionsForHost, runaroundZonesForHost } from '../model/runaround'
 import { sanitizePanelHtml, sanitizeTextHtml } from '../model/sanitize-html'
-import { contentTransformCss } from '../model/viewport-content'
 import {
   bumpTextSectionFonts,
   deleteSection,
@@ -81,6 +80,7 @@ import {
   selectionRects,
   snapCaretAfterEdit,
 } from '../model/text-layout'
+import { contentTransformCss } from '../model/viewport-content'
 import OpShadowRoot from './OpShadowRoot.vue'
 
 const props = withDefaults(
