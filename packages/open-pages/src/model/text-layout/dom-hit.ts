@@ -158,12 +158,30 @@ function lineMeasureStyle(line: LaidOutLine, base: TextMeasureStyle): TextMeasur
   }
 }
 
+/** Effective line font size in px (fit paint may use em + data-op-font-px). */
+export function lineFontSizePx(el: HTMLElement, fallback = 16): number {
+  const attr = el.getAttribute('data-op-font-px')
+  if (attr) {
+    const n = Number.parseFloat(attr)
+    if (Number.isFinite(n) && n > 0) return n
+  }
+  const inline = (el.style.fontSize || '').trim()
+  if (inline.endsWith('px')) {
+    const n = Number.parseFloat(inline)
+    if (Number.isFinite(n) && n > 0) return n
+  }
+  if (typeof getComputedStyle === 'function') {
+    const cs = Number.parseFloat(getComputedStyle(el).fontSize)
+    if (Number.isFinite(cs) && cs > 0) return cs
+  }
+  return fallback
+}
+
 function styleFromLineEl(el: HTMLElement, fallback: DomHitFallback): TextMeasureStyle {
-  const fs = Number.parseFloat(el.style.fontSize)
   const weight = el.style.fontWeight
   return {
     fontFamily: el.style.fontFamily || fallback.style.fontFamily,
-    fontSize: Number.isFinite(fs) && fs > 0 ? fs : fallback.style.fontSize,
+    fontSize: lineFontSizePx(el, fallback.style.fontSize),
     fontBold: weight === '700' || weight === 'bold' ? true : fallback.style.fontBold,
     fontItalic: el.style.fontStyle === 'italic' ? true : fallback.style.fontItalic,
   }
@@ -175,11 +193,7 @@ function padLeftPx(el: HTMLElement): number {
     const n = Number.parseFloat(raw)
     if (Number.isFinite(n) && n > 0) {
       if (raw.endsWith('em')) {
-        const fs =
-          Number.parseFloat(el.style.fontSize) ||
-          Number.parseFloat(getComputedStyle(el).fontSize) ||
-          16
-        return n * fs
+        return n * lineFontSizePx(el, 16)
       }
       return n
     }

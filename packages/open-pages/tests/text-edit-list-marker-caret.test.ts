@@ -4,7 +4,11 @@ import { nextTick } from 'vue'
 import OpenPagesRenderer from '../src/components/OpenPagesRenderer.vue'
 import { createHtmlShowcaseDocument } from '../src/model/html-showcase-demo'
 import { plainTextOf } from '../src/model/text-edit/plain-offset'
-import { caretLeftInLineEl, offsetAtClientPoint } from '../src/model/text-layout/dom-hit'
+import {
+  caretLeftInLineEl,
+  lineFontSizePx,
+  offsetAtClientPoint,
+} from '../src/model/text-layout/dom-hit'
 import { createCanvasMeasurer, createFixedMeasurer } from '../src/model/text-layout/measure'
 import { listGutterPx } from './helpers/wysiwyg-harness'
 
@@ -202,7 +206,7 @@ describe('showcase ordered list: caret chrome vs marker (user-visible)', () => {
     const text = el.textContent ?? ''
     const rect = el.getBoundingClientRect()
     const gutter = listGutterPx(el)
-    const fontSize = Number.parseFloat(el.style.fontSize) || 14
+    const fontSize = lineFontSizePx(el, 14)
     const measure = createCanvasMeasurer()
     const textW = measure(text, {
       fontFamily: el.style.fontFamily || 'Georgia, serif',

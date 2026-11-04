@@ -1683,6 +1683,22 @@ function verticalAlignOffset(
   return 0
 }
 
+/** Fit scale as % of authoring font-size on the lines container (children use em). */
+function linesBoxStyle(section: Section) {
+  if (section.type !== 'text' && section.type !== 'headline') return {}
+  const fitMode = props.fontsReady === false ? 'none' : section.textFit
+  if (fitMode !== 'fill') return {}
+  const fitted = lineLayouts.value.get(section.id)?.fontSize ?? section.fontSize
+  const base = Math.max(1, section.fontSize)
+  return { fontSize: `${(fitted / base) * 100}%` }
+}
+
+function lineFontPx(section: Section, line: LaidOutLine): number {
+  if (section.type !== 'text' && section.type !== 'headline') return 16
+  const fitted = lineLayouts.value.get(section.id)?.fontSize ?? section.fontSize
+  return fitted * (line.fontScale ?? 1)
+}
+
 function lineBoxStyle(section: Section, line: LaidOutLine, fontSize: number) {
   const scale = line.fontScale ?? 1
   const bold =
@@ -1728,7 +1744,8 @@ function lineBoxStyle(section: Section, line: LaidOutLine, fontSize: number) {
     top: `${line.y + vOffset}px`,
     width: `${line.width}px`,
     height: `${line.height}px`,
-    fontSize: `${fontSize * scale}px`,
+    // Inherit fit % from [data-op-lines]; headings use fontScale em.
+    fontSize: `${scale}em`,
     lineHeight: `${line.height}px`,
     fontFamily:
       section.type === 'text' || section.type === 'headline' ? section.fontFamily : undefined,
@@ -1850,6 +1867,7 @@ function imageAlt(section: Section): string {
               class="op-section-lines"
               :class="{ 'is-editing': isEditing(section) && textEditMode === 'wysiwyg' }"
               data-op-lines
+              :style="linesBoxStyle(section)"
             >
               <div
                 v-for="(line, lineIndex) in lineLayouts.get(section.id)?.lines ?? []"
@@ -1857,6 +1875,7 @@ function imageAlt(section: Section): string {
                 class="op-line"
                 data-op-line
                 :data-op-marker="line.listMarker || undefined"
+                :data-op-font-px="String(lineFontPx(section, line))"
                 :style="
                   lineBoxStyle(
                     section,

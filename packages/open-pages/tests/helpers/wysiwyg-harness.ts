@@ -2,6 +2,7 @@ import { mount, type VueWrapper } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import OpenPagesRenderer from '../../src/components/OpenPagesRenderer.vue'
 import type { OpenPagesDocument } from '../../src/model/document'
+import { lineFontSizePx } from '../../src/model/text-layout/dom-hit'
 import { createCanvasMeasurer } from '../../src/model/text-layout/measure'
 
 export type MountedEdit = {
@@ -81,7 +82,7 @@ export function lineByNeedle(mounted: MountedEdit, needle: string) {
  */
 export function listGutterPx(el: HTMLElement): number {
   const pad = el.style.paddingLeft || ''
-  const fs = Number.parseFloat(el.style.fontSize) || 14
+  const fs = lineFontSizePx(el, 14)
   if (pad.endsWith('em')) {
     const em = Number.parseFloat(pad)
     return Number.isFinite(em) ? em * fs : 0
@@ -101,7 +102,7 @@ export function pointIntoWord(el: HTMLElement, word: string, into = 1) {
   const intoClamped = Math.max(0, into)
   // Measure up to the caret slot: before glyph `into` within the word.
   const end = Math.min(text.length, at + intoClamped)
-  const fontSize = Number.parseFloat(el.style.fontSize) || 14
+  const fontSize = lineFontSizePx(el, 14)
   const fontFamily = el.style.fontFamily || 'Georgia, serif'
   const fontBold = el.style.fontWeight === '700' || el.style.fontWeight === 'bold'
   const measure = createCanvasMeasurer()

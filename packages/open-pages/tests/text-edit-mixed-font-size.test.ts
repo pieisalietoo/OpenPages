@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { nextTick } from 'vue'
 import { createHtmlShowcaseDocument } from '../src/model/html-showcase-demo'
 import { plainTextOf } from '../src/model/text-edit/plain-offset'
+import { lineFontSizePx } from '../src/model/text-layout/dom-hit'
 import { createCanvasMeasurer } from '../src/model/text-layout/measure'
 import {
   copyPlain,
@@ -37,8 +38,7 @@ function stubMixedSizeRunRects(mounted: MountedEdit) {
     for (const run of line.findAll('[data-op-run]')) {
       const el = run.element as HTMLElement
       const text = el.textContent ?? ''
-      const fontSize =
-        Number.parseFloat(el.style.fontSize) || Number.parseFloat(lineEl.style.fontSize) || 14
+      const fontSize = Number.parseFloat(el.style.fontSize) || lineFontSizePx(lineEl, 14)
       const fontBold = el.style.fontWeight === '700' || el.style.fontWeight === 'bold'
       const width = Math.max(1, measure(text, { fontFamily, fontSize, fontBold }))
       const height = lineRect.height || fontSize * 1.35

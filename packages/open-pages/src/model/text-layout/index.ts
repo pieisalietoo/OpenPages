@@ -9,6 +9,7 @@ export {
   caretLeftInLineEl,
   type DomHitFallback,
   hitTestClientPoint,
+  lineFontSizePx,
   offsetAtClientPoint,
 } from './dom-hit'
 export {

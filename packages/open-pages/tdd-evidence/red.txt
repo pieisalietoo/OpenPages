@@ -1,0 +1,77 @@
+﻿
+======== RED: export must inline remote catalog fonts as data: in fontEmbedCSS 2026-10-29T11:45:55.3891741+01:00 ========
+html-to-image does not fetch url(https) inside fontEmbedCSS; Bodoni/Calibri remote sources stay unloaded → generic paint.
+
+
+ RUN  v3.2.7 E:/Projects/OpenPages/packages/open-pages
+
+ ✓ tests/export-font-embed.test.ts > export embeds catalog custom fonts > fontEmbedCSSFromFonts builds @font-face rules from catalog sources 3ms
+ ✓ tests/export-font-embed.test.ts > export embeds catalog custom fonts > toPng passes fontEmbedCSS so html-to-image can paint custom faces 1ms
+ ✓ tests/export-font-embed.test.ts > export embeds catalog custom fonts > toJpeg (pdf/print raster) also receives fontEmbedCSS 1ms
+ × tests/export-font-inline.test.ts > export inlines remote catalog fonts for html-to-image > toJpeg fontEmbedCSS uses data: URLs for remote Bodoni/Calibri sources 14ms
+   → html-to-image only paints inlined faces; remote url() in fontEmbedCSS is not fetched: expected '@font-face { font-family: \'Bodoni MT…' to match /url\(\s*["']?data:font\//
+ × tests/export-font-inline.test.ts > export inlines remote catalog fonts for html-to-image > toPng fontEmbedCSS likewise inlines remote sources as data: URLs 2ms
+   → html-to-image only paints inlined faces; remote url() in fontEmbedCSS is not fetched: expected '@font-face { font-family: \'Bodoni MT…' to match /url\(\s*["']?data:font\//
+node.exe : 
+In C:\Program Files\nodejs\pnpm.ps1:16 car:5
++     & "$basedir/node$exe"  "$basedir/node_modules/corepack/dist/pnpm. ...
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/export-font-inline.test.ts > export inlines remote catalog fonts for html-to-image > toJpeg fontEmbedCSS 
+uses data: URLs for remote Bodoni/Calibri sources
+AssertionError: html-to-image only paints inlined faces; remote url() in fontEmbedCSS is not fetched: expected 
+'@font-face { font-family: \'Bodoni MT…' to match /url\(\s*["']?data:font\//
+
+- Expected: 
+/url\(\s*["']?data:font\//i
+
++ Received: 
+"@font-face { font-family: 'Bodoni MT Black'; src: url(\"https://cdn.example.test/fonts/bodoni-mt-black.woff2\") 
+format('woff2'); font-weight: 900; font-style: normal; }
+@font-face { font-family: 'Calibri Bold'; src: url(\"https://cdn.example.test/fonts/calibri-bold.ttf\") 
+format('truetype'); font-weight: 700; font-style: normal; }"
+
+ ❯ assertFontEmbedCssInlined tests/export-font-inline.test.ts:79:5
+     77|     css,
+     78|     'html-to-image only paints inlined faces; remote url() in fontEmbe…
+     79|   ).toMatch(/url\(\s*["']?data:font\//i)
+       |     ^
+     80|   expect(
+     81|     css,
+ ❯ tests/export-font-inline.test.ts:100:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/export-font-inline.test.ts > export inlines remote catalog fonts for html-to-image > toPng fontEmbedCSS 
+likewise inlines remote sources as data: URLs
+AssertionError: html-to-image only paints inlined faces; remote url() in fontEmbedCSS is not fetched: expected 
+'@font-face { font-family: \'Bodoni MT…' to match /url\(\s*["']?data:font\//
+
+- Expected: 
+/url\(\s*["']?data:font\//i
+
++ Received: 
+"@font-face { font-family: 'Bodoni MT Black'; src: url(\"https://cdn.example.test/fonts/bodoni-mt-black.woff2\") 
+format('woff2'); font-weight: 900; font-style: normal; }"
+
+ ❯ assertFontEmbedCssInlined tests/export-font-inline.test.ts:79:5
+     77|     css,
+     78|     'html-to-image only paints inlined faces; remote url() in fontEmbe…
+     79|   ).toMatch(/url\(\s*["']?data:font\//i)
+       |     ^
+     80|   expect(
+     81|     css,
+ ❯ tests/export-font-inline.test.ts:111:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  2 failed | 3 passed (5)
+   Start at  11:45:52
+   Duration  2.55s (transform 304ms, setup 709ms, collect 414ms, tests 25ms, environment 2.71s, prepare 456ms)
+
